@@ -1,0 +1,151 @@
+"use client";
+
+import { ClinicLogSummary } from "@/app/types/clinic";
+
+interface ConsumableTimelineTableProps {
+  title: string;
+  borderClassName: string;
+  bgClassName: string;
+  textClassName: string;
+  emptyText: string;
+  rows: ClinicLogSummary["consumables"]["timeline"];
+  rowKeyPrefix: string;
+}
+
+function ConsumableTimelineTable({
+  title,
+  borderClassName,
+  bgClassName,
+  textClassName,
+  emptyText,
+  rows,
+  rowKeyPrefix,
+}: ConsumableTimelineTableProps) {
+  return (
+    <div className={`rounded-lg border ${borderClassName} ${bgClassName} p-3`}>
+      <div className={`text-xs font-bold ${textClassName} mb-2`}>{title}</div>
+      <div className="overflow-x-auto max-h-[220px]">
+        <table className="min-w-full text-[11px] text-gray-300">
+          <thead>
+            <tr className="border-b border-gray-700">
+              <th className="text-left py-1 pr-2">시간</th>
+              <th className="text-left py-1 pr-2">플레이어</th>
+              <th className="text-left py-1 pr-2">이름</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.slice(0, 30).map((item, idx) => (
+              <tr key={`${rowKeyPrefix}-${item.timeSec}-${item.playerName}-${idx}`} className="border-b border-gray-800">
+                <td className="py-1 pr-2 font-mono">{item.time}</td>
+                <td className="py-1 pr-2">{item.playerName}</td>
+                <td className="py-1 pr-2">{item.ability}</td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td className="py-2 text-gray-500" colSpan={3}>
+                  {emptyText}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+interface ClinicConsumablesSectionProps {
+  summary: ClinicLogSummary;
+}
+
+export default function ClinicConsumablesSection({ summary }: ClinicConsumablesSectionProps) {
+  const healthstoneTimeline = summary.consumables.timeline.filter((item) => item.type === "HEALTHSTONE");
+  const healingPotionTimeline = summary.consumables.timeline.filter((item) => item.type === "HEALING_POTION");
+  const dpsPotionTimeline = summary.consumables.timeline.filter((item) => item.type === "DPS_POTION");
+
+  return (
+    <div className="mt-6 p-5 bg-gray-900 rounded-xl border border-gray-700">
+      <div className="text-sm text-gray-300 mb-3 font-bold">🧪 소모품 사용 타임라인 (생석/치유물약/딜물약)</div>
+      <div className="text-[11px] text-gray-400 mb-3">
+        생석 미사용: {summary.consumables.missing.healthstone.slice(0, 12).join(", ") || "-"} | 치유물약 미사용:{" "}
+        {summary.consumables.missing.healingPotion.slice(0, 12).join(", ") || "-"} | 딜물약 미사용:{" "}
+        {summary.consumables.missing.dpsPotion.slice(0, 12).join(", ") || "-"}
+      </div>
+      <div className="text-[11px] text-gray-400 mb-2">
+        추천 오버라이드:
+        <span className="ml-1 font-mono text-cyan-300">{summary.consumables.recommendedOverrides || "(추가 후보 없음)"}</span>
+      </div>
+      <div className="text-[11px] text-gray-500 mb-3">
+        `.env.local` 예시:{" "}
+        <span className="font-mono">
+          WCL_CONSUMABLE_SPELL_OVERRIDES={summary.consumables.recommendedOverrides || "6262:HEALTHSTONE"}
+        </span>
+      </div>
+      {summary.consumables.spellIdInsights.length > 0 && (
+        <div className="overflow-x-auto max-h-[180px] mb-4">
+          <table className="min-w-full text-[11px] text-gray-300">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th className="text-left py-1 pr-3">Spell ID</th>
+                <th className="text-left py-1 pr-3">이름</th>
+                <th className="text-left py-1 pr-3">분류</th>
+                <th className="text-left py-1 pr-3">근거</th>
+                <th className="text-left py-1 pr-3">횟수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.consumables.spellIdInsights.slice(0, 20).map((row) => (
+                <tr key={`${row.spellId}-${row.inferredType}`} className="border-b border-gray-800">
+                  <td className="py-1 pr-3 font-mono">{row.spellId}</td>
+                  <td className="py-1 pr-3">{row.ability}</td>
+                  <td className="py-1 pr-3">{row.inferredType}</td>
+                  <td className="py-1 pr-3">{row.source}</td>
+                  <td className="py-1 pr-3">{row.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {summary.consumables.unclassifiedCandidates.length > 0 && (
+        <div className="text-[11px] text-amber-300 mb-3">
+          미분류 후보:{" "}
+          {summary.consumables.unclassifiedCandidates
+            .slice(0, 8)
+            .map((c) => `${c.spellId ?? "?"}:${c.ability}(${c.count})`)
+            .join(", ")}
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <ConsumableTimelineTable
+          title="생석 타임라인"
+          borderClassName="border-indigo-800/70"
+          bgClassName="bg-indigo-950/15"
+          textClassName="text-indigo-300"
+          emptyText="사용 기록 없음"
+          rows={healthstoneTimeline}
+          rowKeyPrefix="hs"
+        />
+        <ConsumableTimelineTable
+          title="치유물약 타임라인"
+          borderClassName="border-emerald-800/70"
+          bgClassName="bg-emerald-950/15"
+          textClassName="text-emerald-300"
+          emptyText="사용 기록 없음"
+          rows={healingPotionTimeline}
+          rowKeyPrefix="heal-pot"
+        />
+        <ConsumableTimelineTable
+          title="딜물약 타임라인"
+          borderClassName="border-sky-800/70"
+          bgClassName="bg-sky-950/15"
+          textClassName="text-sky-300"
+          emptyText="사용 기록 없음"
+          rows={dpsPotionTimeline}
+          rowKeyPrefix="dps-pot"
+        />
+      </div>
+    </div>
+  );
+}

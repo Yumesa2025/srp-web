@@ -1,0 +1,542 @@
+import {
+  classifyConsumable,
+  ConsumableSource,
+  ConsumableType,
+  DeathSummary,
+  DEFENSIVE_NAME_SET,
+  detectWipeTailStart,
+  getAbilityName,
+  getDamage,
+  getHpPercentBefore,
+  normalizeName,
+  PlayerInsight,
+  pushAmountToSecMap,
+  secondsToTime,
+  WclAbilityNode,
+  WclActorNode,
+  WclEventNode,
+  WclFightNode,
+} from "./helpers";
+
+interface BuildSummaryParams {
+  reportId: string;
+  selectedFight: WclFightNode;
+  throughputStepSec: number;
+  abilities: WclAbilityNode[];
+  actors: WclActorNode[];
+  rawDeathEvents: WclEventNode[];
+  rawEnemyCastEvents: WclEventNode[];
+  rawFriendlyCastEvents: WclEventNode[];
+  rawDamageEvents: WclEventNode[];
+  rawHealingEvents: WclEventNode[];
+}
+
+export const buildLogSummary = ({
+  reportId,
+  selectedFight,
+  throughputStepSec,
+  abilities,
+  actors,
+  rawDeathEvents,
+  rawEnemyCastEvents,
+  rawFriendlyCastEvents,
+  rawDamageEvents,
+  rawHealingEvents,
+}: BuildSummaryParams) => {
+  const abilityMap = new Map<number, string>();
+  const actorMap = new Map<number, string>();
+  abilities.forEach((ability) => abilityMap.set(ability.gameID, ability.name));
+  actors.forEach((actor) => actorMap.set(actor.id, actor.name));
+  const playerActorIds = new Set(
+    actors.filter((actor) => actor.type === "Player" || Boolean(actor.subType)).map((actor) => actor.id)
+  );
+
+  const deathEvents = (rawDeathEvents as WclEventNode[])
+    .filter((event) => event.type === "death" && typeof event.timestamp === "number")
+    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  const enemyCastEvents = (rawEnemyCastEvents as WclEventNode[])
+    .filter((event) => event.type === "cast" && typeof event.timestamp === "number")
+    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  const friendlyCastEvents = (rawFriendlyCastEvents as WclEventNode[])
+    .filter((event) => event.type === "cast" && typeof event.timestamp === "number")
+    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+  const damageEvents = (rawDamageEvents as WclEventNode[])
+    .filter((event) => typeof event.timestamp === "number")
+    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+  const healingEvents = (rawHealingEvents as WclEventNode[])
+    .filter((event) => typeof event.timestamp === "number")
+    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  const defensiveCastEvents = friendlyCastEvents.filter((event) => {
+    const abilityName = getAbilityName(event, abilityMap);
+    return DEFENSIVE_NAME_SET.has(normalizeName(abilityName));
+  });
+
+  const participantIds = new Set<number>();
+  deathEvents.forEach((event) => {
+    if (typeof event.targetID === "number" && playerActorIds.has(event.targetID)) {
+      participantIds.add(event.targetID);
+    }
+  });
+  friendlyCastEvents.forEach((event) => {
+    if (typeof event.sourceID === "number" && playerActorIds.has(event.sourceID)) {
+      participantIds.add(event.sourceID);
+    }
+  });
+  damageEvents.forEach((event) => {
+    if (typeof event.sourceID === "number" && playerActorIds.has(event.sourceID)) {
+      participantIds.add(event.sourceID);
+    }
+  });
+  healingEvents.forEach((event) => {
+    if (typeof event.sourceID === "number" && playerActorIds.has(event.sourceID)) {
+      participantIds.add(event.sourceID);
+    }
+  });
+
+  const consumableTimeline: Array<{
+    time: string;
+    timeSec: number;
+    playerName: string;
+    ability: string;
+    type: ConsumableType;
+  }> = [];
+  const consumableByPlayer = new Map<string, { playerName: string; healthstone: number; healingPotion: number; dpsPotion: number }>();
+  const consumableSpellIdStats = new Map<
+    number,
+    { spellId: number; ability: string; inferredType: ConsumableType; source: ConsumableSource; count: number }
+  >();
+  const unclassifiedConsumableCandidates = new Map<string, { spellId: number | null; ability: string; count: number }>();
+
+  const ensureConsumablePlayer = (playerName: string) => {
+    if (!consumableByPlayer.has(playerName)) {
+      consumableByPlayer.set(playerName, { playerName, healthstone: 0, healingPotion: 0, dpsPotion: 0 });
+    }
+    return consumableByPlayer.get(playerName)!;
+  };
+
+  friendlyCastEvents.forEach((event) => {
+    if (!event.timestamp || typeof event.sourceID !== "number" || !playerActorIds.has(event.sourceID)) return;
+    const abilityName = getAbilityName(event, abilityMap);
+    const classification = classifyConsumable(event, abilityName);
+    const abilityId =
+      typeof event.abilityGameID === "number"
+        ? event.abilityGameID
+        : typeof event.ability?.guid === "number"
+          ? event.ability.guid
+          : null;
+
+    const normalizedAbility = normalizeName(abilityName);
+    const maybeConsumableByName =
+      normalizedAbility.includes("물약") ||
+      normalizedAbility.includes("potion") ||
+      normalizedAbility.includes("생명석") ||
+      normalizedAbility.includes("healthstone");
+    if (!classification) {
+      if (maybeConsumableByName) {
+        const key = `${abilityId ?? "null"}-${abilityName}`;
+        const prev = unclassifiedConsumableCandidates.get(key);
+        if (prev) {
+          prev.count += 1;
+        } else {
+          unclassifiedConsumableCandidates.set(key, {
+            spellId: abilityId,
+            ability: abilityName,
+            count: 1,
+          });
+        }
+      }
+      return;
+    }
+    const type = classification.type;
+
+    const sourceName = actorMap.get(event.sourceID) || `플레이어#${event.sourceID}`;
+    const timeSec = Math.max(0, Math.floor((event.timestamp - selectedFight.startTime) / 1000));
+    const row = ensureConsumablePlayer(sourceName);
+    if (type === "HEALTHSTONE") row.healthstone += 1;
+    if (type === "HEALING_POTION") row.healingPotion += 1;
+    if (type === "DPS_POTION") row.dpsPotion += 1;
+
+    consumableTimeline.push({
+      time: secondsToTime(timeSec),
+      timeSec,
+      playerName: sourceName,
+      ability: abilityName,
+      type,
+    });
+
+    if (abilityId !== null) {
+      const prev = consumableSpellIdStats.get(abilityId);
+      if (prev) {
+        prev.count += 1;
+      } else {
+        consumableSpellIdStats.set(abilityId, {
+          spellId: abilityId,
+          ability: abilityName,
+          inferredType: type,
+          source: classification.source,
+          count: 1,
+        });
+      }
+    }
+  });
+  consumableTimeline.sort((a, b) => a.timeSec - b.timeSec);
+
+  const deathSeconds = deathEvents.map((event) => Math.max(0, Math.floor(((event.timestamp || 0) - selectedFight.startTime) / 1000)));
+  const fightDurationSec = Math.max(1, Math.floor((selectedFight.endTime - selectedFight.startTime) / 1000));
+  const wipeTail = detectWipeTailStart(deathSeconds, fightDurationSec);
+  const tailStartSec = wipeTail?.startSec ?? null;
+
+  const damageBySecond = new Map<number, number>();
+  const healingBySecond = new Map<number, number>();
+  damageEvents.forEach((event) => {
+    if (!event.timestamp || typeof event.sourceID !== "number" || !playerActorIds.has(event.sourceID)) return;
+    const sec = Math.max(0, Math.floor((event.timestamp - selectedFight.startTime) / 1000));
+    pushAmountToSecMap(damageBySecond, sec, getDamage(event));
+  });
+  healingEvents.forEach((event) => {
+    if (!event.timestamp || typeof event.sourceID !== "number" || !playerActorIds.has(event.sourceID)) return;
+    const sec = Math.max(0, Math.floor((event.timestamp - selectedFight.startTime) / 1000));
+    pushAmountToSecMap(healingBySecond, sec, event.amount);
+  });
+
+  const bossCastBySecond = new Map<number, number>();
+  const defensiveCastBySecond = new Map<number, number>();
+  const deathBySecond = new Map<number, number>();
+  const bossCastEventsSimple: Array<{ time: string; timeSec: number; ability: string }> = [];
+  const defensiveCastEventsSimple: Array<{ time: string; timeSec: number; ability: string }> = [];
+
+  enemyCastEvents.forEach((event) => {
+    const timeSec = Math.max(0, Math.floor(((event.timestamp || 0) - selectedFight.startTime) / 1000));
+    const ability = getAbilityName(event, abilityMap);
+    bossCastBySecond.set(timeSec, (bossCastBySecond.get(timeSec) || 0) + 1);
+    bossCastEventsSimple.push({ time: secondsToTime(timeSec), timeSec, ability });
+  });
+
+  defensiveCastEvents.forEach((event) => {
+    const timeSec = Math.max(0, Math.floor(((event.timestamp || 0) - selectedFight.startTime) / 1000));
+    const ability = getAbilityName(event, abilityMap);
+    defensiveCastBySecond.set(timeSec, (defensiveCastBySecond.get(timeSec) || 0) + 1);
+    defensiveCastEventsSimple.push({ time: secondsToTime(timeSec), timeSec, ability });
+  });
+
+  const deaths: DeathSummary[] = deathEvents.map((event) => {
+    const ts = event.timestamp || selectedFight.startTime;
+    const timeSec = Math.max(0, Math.floor((ts - selectedFight.startTime) / 1000));
+    deathBySecond.set(timeSec, (deathBySecond.get(timeSec) || 0) + 1);
+    const playerName = actorMap.get(event.targetID || -1) || `대상#${event.targetID ?? "?"}`;
+    const ability = getAbilityName(event, abilityMap);
+
+    const nearbyDefensives = defensiveCastEvents
+      .filter((cast) => {
+        const castTs = cast.timestamp || 0;
+        if (castTs < ts - 5000 || castTs > ts) return false;
+        if (!event.targetID) return true;
+        return cast.sourceID === event.targetID || cast.targetID === event.targetID || cast.targetID === undefined;
+      })
+      .map((cast) => getAbilityName(cast, abilityMap));
+
+    const nearbyBossSkills = enemyCastEvents
+      .filter((cast) => {
+        const castTs = cast.timestamp || 0;
+        return castTs >= ts - 4000 && castTs <= ts + 1000;
+      })
+      .map((cast) => getAbilityName(cast, abilityMap));
+
+    return {
+      playerName,
+      time: secondsToTime(timeSec),
+      timeSec,
+      ability,
+      damage: getDamage(event),
+      hpPercentBefore: getHpPercentBefore(event),
+      defensives: Array.from(new Set(nearbyDefensives)).slice(0, 5),
+      nearbyBossSkills: Array.from(new Set(nearbyBossSkills)).slice(0, 5),
+    };
+  });
+
+  const meaningfulDeaths = deaths.filter((death) => (tailStartSec === null ? true : death.timeSec < tailStartSec));
+  const excludedTailDeaths = deaths.length - meaningfulDeaths.length;
+  const deathStartSec = meaningfulDeaths.length > 0 ? meaningfulDeaths[0].timeSec : null;
+
+  const topCauses = Array.from(
+    meaningfulDeaths.reduce((acc, death) => {
+      acc.set(death.ability, (acc.get(death.ability) || 0) + 1);
+      return acc;
+    }, new Map<string, number>())
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([ability, count]) => ({ ability, count }));
+
+  const playerDeaths = Array.from(
+    meaningfulDeaths.reduce((acc, death) => {
+      acc.set(death.playerName, (acc.get(death.playerName) || 0) + 1);
+      return acc;
+    }, new Map<string, number>())
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([name, count]) => ({ name, count }));
+
+  const defensiveMissingCount = meaningfulDeaths.filter((death) => death.defensives.length === 0).length;
+
+  const perPlayerMap = meaningfulDeaths.reduce((acc, death) => {
+    const list = acc.get(death.playerName) || [];
+    list.push(death);
+    acc.set(death.playerName, list);
+    return acc;
+  }, new Map<string, DeathSummary[]>());
+
+  const perPlayer: PlayerInsight[] = Array.from(perPlayerMap.entries())
+    .map(([playerName, entries]) => {
+      const sorted = [...entries].sort((a, b) => a.timeSec - b.timeSec);
+      const deathsCount = sorted.length;
+      const defensiveMissing = sorted.filter((entry) => entry.defensives.length === 0).length;
+      const hpValues = sorted
+        .map((entry) => entry.hpPercentBefore)
+        .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+      const avgHpBeforeDeath =
+        hpValues.length > 0 ? Number((hpValues.reduce((sum, value) => sum + value, 0) / hpValues.length).toFixed(1)) : null;
+      const defensiveUseRate =
+        deathsCount > 0 ? Number((((deathsCount - defensiveMissing) / deathsCount) * 100).toFixed(1)) : null;
+
+      const playerTopCauses = Array.from(
+        sorted.reduce((acc, entry) => {
+          acc.set(entry.ability, (acc.get(entry.ability) || 0) + 1);
+          return acc;
+        }, new Map<string, number>())
+      )
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([ability, count]) => ({ ability, count }));
+
+      const nearbyBossSkills = Array.from(
+        sorted.reduce((acc, entry) => {
+          entry.nearbyBossSkills.forEach((ability) => {
+            acc.set(ability, (acc.get(ability) || 0) + 1);
+          });
+          return acc;
+        }, new Map<string, number>())
+      )
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([ability, count]) => ({ ability, count }));
+
+      let riskScore = deathsCount * 1.4 + defensiveMissing * 1.6;
+      if (avgHpBeforeDeath !== null && avgHpBeforeDeath < 35) riskScore += 1.2;
+      if (deathsCount >= 3) riskScore += 1;
+      if (deathsCount >= 5) riskScore += 1;
+
+      const risk: PlayerInsight["risk"] = riskScore >= 9 ? "HIGH" : riskScore >= 5 ? "MEDIUM" : "LOW";
+      const notes: string[] = [];
+      if (defensiveMissing >= Math.ceil(deathsCount * 0.5)) {
+        notes.push("생존기 선사용 비율이 낮음");
+      }
+      if (avgHpBeforeDeath !== null && avgHpBeforeDeath < 35) {
+        notes.push("피해 직전 평균 HP가 낮음");
+      }
+      if (playerTopCauses[0]) {
+        notes.push(`반복 원인: ${playerTopCauses[0].ability}`);
+      }
+      if (notes.length === 0) {
+        notes.push("핵심 사망 지표 양호");
+      }
+
+      return {
+        playerName,
+        deaths: deathsCount,
+        firstDeathTime: sorted[0]?.time || null,
+        lastDeathTime: sorted[sorted.length - 1]?.time || null,
+        avgHpBeforeDeath,
+        defensiveMissingCount: defensiveMissing,
+        defensiveUseRate,
+        topCauses: playerTopCauses,
+        nearbyBossSkills,
+        deathTimes: sorted.slice(0, 8).map((entry) => entry.time),
+        risk,
+        notes,
+      };
+    })
+    .sort((a, b) => {
+      const riskRank = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+      if (riskRank[b.risk] !== riskRank[a.risk]) return riskRank[b.risk] - riskRank[a.risk];
+      if (b.deaths !== a.deaths) return b.deaths - a.deaths;
+      return a.playerName.localeCompare(b.playerName);
+    });
+
+  const uniqueBossCastPoints = Array.from(
+    bossCastEventsSimple.reduce((acc, cast) => {
+      const key = `${cast.timeSec}-${cast.ability}`;
+      if (!acc.has(key)) acc.set(key, cast);
+      return acc;
+    }, new Map<string, { time: string; timeSec: number; ability: string }>())
+  )
+    .map(([, value]) => value)
+    .sort((a, b) => a.timeSec - b.timeSec);
+
+  const bossCoverage = uniqueBossCastPoints.slice(0, 240).map((bossCast) => {
+    const nearbyDefensives = defensiveCastEventsSimple
+      .filter((cast) => cast.timeSec >= bossCast.timeSec - 3 && cast.timeSec <= bossCast.timeSec + 2)
+      .map((cast) => cast.ability);
+    const uniqDefensives = Array.from(new Set(nearbyDefensives)).slice(0, 5);
+    return {
+      time: bossCast.time,
+      timeSec: bossCast.timeSec,
+      ability: bossCast.ability,
+      defensiveCount: nearbyDefensives.length,
+      defensives: uniqDefensives,
+      covered: nearbyDefensives.length > 0,
+    };
+  });
+
+  const deathTimeline: Array<{ sec: number; time: string; deaths: number; cumulativeDeaths: number }> = [];
+  const castTimeline: Array<{
+    sec: number;
+    time: string;
+    bossCasts: number;
+    defensiveCasts: number;
+    deaths: number;
+    cumulativeDeaths: number;
+  }> = [];
+
+  let cumulativeDeaths = 0;
+  for (let sec = 0; sec <= fightDurationSec; sec += 1) {
+    const deathsAtSec = deathBySecond.get(sec) || 0;
+    cumulativeDeaths += deathsAtSec;
+
+    deathTimeline.push({
+      sec,
+      time: secondsToTime(sec),
+      deaths: deathsAtSec,
+      cumulativeDeaths,
+    });
+
+    castTimeline.push({
+      sec,
+      time: secondsToTime(sec),
+      bossCasts: bossCastBySecond.get(sec) || 0,
+      defensiveCasts: defensiveCastBySecond.get(sec) || 0,
+      deaths: deathsAtSec,
+      cumulativeDeaths,
+    });
+  }
+
+  const throughputTimeline: Array<{
+    sec: number;
+    time: string;
+    damage: number;
+    healing: number;
+    dps: number;
+    hps: number;
+  }> = [];
+  for (let sec = 0; sec <= fightDurationSec; sec += throughputStepSec) {
+    const windowEnd = Math.min(fightDurationSec, sec + throughputStepSec - 1);
+    let damageSum = 0;
+    let healingSum = 0;
+    for (let t = sec; t <= windowEnd; t += 1) {
+      damageSum += damageBySecond.get(t) || 0;
+      healingSum += healingBySecond.get(t) || 0;
+    }
+    const windowSize = windowEnd - sec + 1;
+    throughputTimeline.push({
+      sec,
+      time: secondsToTime(sec),
+      damage: damageSum,
+      healing: healingSum,
+      dps: Math.round(damageSum / windowSize),
+      hps: Math.round(healingSum / windowSize),
+    });
+  }
+
+  const participantNames = Array.from(participantIds)
+    .map((id) => actorMap.get(id))
+    .filter((name): name is string => Boolean(name))
+    .sort((a, b) => a.localeCompare(b));
+
+  participantNames.forEach((name) => {
+    ensureConsumablePlayer(name);
+  });
+
+  const consumablePerPlayer = Array.from(consumableByPlayer.values()).sort((a, b) =>
+    a.playerName.localeCompare(b.playerName)
+  );
+
+  const playersWithoutHealthstone = consumablePerPlayer.filter((row) => row.healthstone === 0).map((row) => row.playerName);
+  const playersWithoutHealingPotion = consumablePerPlayer.filter((row) => row.healingPotion === 0).map((row) => row.playerName);
+  const playersWithoutDpsPotion = consumablePerPlayer.filter((row) => row.dpsPotion === 0).map((row) => row.playerName);
+
+  const consumableTotals = consumablePerPlayer.reduce(
+    (acc, row) => {
+      acc.healthstone += row.healthstone;
+      acc.healingPotion += row.healingPotion;
+      acc.dpsPotion += row.dpsPotion;
+      return acc;
+    },
+    { healthstone: 0, healingPotion: 0, dpsPotion: 0 }
+  );
+
+  const spellIdInsights = Array.from(consumableSpellIdStats.values()).sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.spellId - b.spellId;
+  });
+  const recommendedOverrides = spellIdInsights
+    .filter((row) => row.source === "name_guess")
+    .map((row) => `${row.spellId}:${row.inferredType}`)
+    .filter((value, index, arr) => arr.indexOf(value) === index)
+    .join(",");
+  const unclassifiedCandidates = Array.from(unclassifiedConsumableCandidates.values()).sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.ability.localeCompare(b.ability);
+  });
+
+  return {
+    reportId,
+    fight: {
+      id: selectedFight.id,
+      name: selectedFight.name || "알 수 없는 전투",
+      kill: Boolean(selectedFight.kill),
+      durationSec: fightDurationSec,
+      bossPercentage: typeof selectedFight.bossPercentage === "number" ? selectedFight.bossPercentage : null,
+    },
+    totalDeaths: deaths.length,
+    meaningfulDeathsCount: meaningfulDeaths.length,
+    excludedTailDeaths,
+    deathStartSec,
+    wipeTail: {
+      detected: Boolean(wipeTail),
+      startSec: wipeTail?.startSec ?? null,
+      windowSec: wipeTail?.windowSec ?? 5,
+      clusterDeaths: wipeTail?.clusterDeaths ?? 0,
+      tailDeaths: tailStartSec === null ? 0 : deaths.filter((death) => death.timeSec >= tailStartSec).length,
+    },
+    topCauses,
+    playerDeaths,
+    defensiveMissingCount,
+    perPlayer,
+    consumables: {
+      timeline: consumableTimeline.slice(0, 500),
+      perPlayer: consumablePerPlayer,
+      spellIdInsights: spellIdInsights.slice(0, 50),
+      recommendedOverrides,
+      unclassifiedCandidates: unclassifiedCandidates.slice(0, 30),
+      missing: {
+        healthstone: playersWithoutHealthstone,
+        healingPotion: playersWithoutHealingPotion,
+        dpsPotion: playersWithoutDpsPotion,
+      },
+      totals: consumableTotals,
+    },
+    throughputStepSec,
+    throughputTimeline,
+    firstMeaningfulDeaths: meaningfulDeaths.slice(0, 8),
+    deaths: meaningfulDeaths.slice(0, 80),
+    bossCoverage: bossCoverage.slice(0, 120),
+    deathTimeline,
+    castTimeline,
+    bossCasts: bossCastEventsSimple.slice(0, 500),
+    defensiveCasts: defensiveCastEventsSimple.slice(0, 500),
+  };
+};
