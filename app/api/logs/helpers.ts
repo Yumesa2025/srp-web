@@ -171,6 +171,33 @@ export const classifyConsumable = (
   return null;
 };
 
+/** 이벤트 배열을 type으로 필터링하고 timestamp 오름차순으로 정렬 */
+export const filterAndSort = (events: WclEventNode[], type?: string): WclEventNode[] =>
+  (events as WclEventNode[])
+    .filter((e) => (!type || e.type === type) && typeof e.timestamp === "number")
+    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+/** 전투 시작 시간 기준으로 이벤트 timestamp를 초 단위로 변환 */
+export const toFightSec = (timestamp: number, fightStartTime: number): number =>
+  Math.max(0, Math.floor((timestamp - fightStartTime) / 1000));
+
+/**
+ * 문자열 배열에서 각 항목의 빈도를 집계하고 내림차순으로 limit개 반환
+ * @returns [{ name, count }]
+ */
+export const countAndRank = (items: string[], limit: number): { name: string; count: number }[] =>
+  Array.from(
+    items.reduce((acc, item) => acc.set(item, (acc.get(item) || 0) + 1), new Map<string, number>())
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([name, count]) => ({ name, count }));
+
+/** 초 단위 Map에서 특정 초의 값을 1 증가 */
+export const incrementSecMap = (map: Map<number, number>, sec: number): void => {
+  map.set(sec, (map.get(sec) || 0) + 1);
+};
+
 export const pushAmountToSecMap = (map: Map<number, number>, sec: number, amount: number | null | undefined) => {
   if (!Number.isFinite(sec) || sec < 0) return;
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) return;

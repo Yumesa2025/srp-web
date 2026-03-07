@@ -2,16 +2,20 @@ import {
   classifyConsumable,
   ConsumableSource,
   ConsumableType,
+  countAndRank,
   DeathSummary,
   DEFENSIVE_NAME_SET,
   detectWipeTailStart,
+  filterAndSort,
   getAbilityName,
   getDamage,
   getHpPercentBefore,
+  incrementSecMap,
   normalizeName,
   PlayerInsight,
   pushAmountToSecMap,
   secondsToTime,
+  toFightSec,
   WclAbilityNode,
   WclActorNode,
   WclEventNode,
@@ -51,23 +55,11 @@ export const buildLogSummary = ({
     actors.filter((actor) => actor.type === "Player" || Boolean(actor.subType)).map((actor) => actor.id)
   );
 
-  const deathEvents = (rawDeathEvents as WclEventNode[])
-    .filter((event) => event.type === "death" && typeof event.timestamp === "number")
-    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-  const enemyCastEvents = (rawEnemyCastEvents as WclEventNode[])
-    .filter((event) => event.type === "cast" && typeof event.timestamp === "number")
-    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-  const friendlyCastEvents = (rawFriendlyCastEvents as WclEventNode[])
-    .filter((event) => event.type === "cast" && typeof event.timestamp === "number")
-    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-  const damageEvents = (rawDamageEvents as WclEventNode[])
-    .filter((event) => typeof event.timestamp === "number")
-    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-  const healingEvents = (rawHealingEvents as WclEventNode[])
-    .filter((event) => typeof event.timestamp === "number")
-    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+  const deathEvents = filterAndSort(rawDeathEvents, "death");
+  const enemyCastEvents = filterAndSort(rawEnemyCastEvents, "cast");
+  const friendlyCastEvents = filterAndSort(rawFriendlyCastEvents, "cast");
+  const damageEvents = filterAndSort(rawDamageEvents);
+  const healingEvents = filterAndSort(rawHealingEvents);
 
   const defensiveCastEvents = friendlyCastEvents.filter((event) => {
     const abilityName = getAbilityName(event, abilityMap);
@@ -75,26 +67,15 @@ export const buildLogSummary = ({
   });
 
   const participantIds = new Set<number>();
-  deathEvents.forEach((event) => {
-    if (typeof event.targetID === "number" && playerActorIds.has(event.targetID)) {
-      participantIds.add(event.targetID);
-    }
-  });
-  friendlyCastEvents.forEach((event) => {
-    if (typeof event.sourceID === "number" && playerActorIds.has(event.sourceID)) {
-      participantIds.add(event.sourceID);
-    }
-  });
-  damageEvents.forEach((event) => {
-    if (typeof event.sourceID === "number" && playerActorIds.has(event.sourceID)) {
-      participantIds.add(event.sourceID);
-    }
-  });
-  healingEvents.forEach((event) => {
-    if (typeof event.sourceID === "number" && playerActorIds.has(event.sourceID)) {
-      participantIds.add(event.sourceID);
-    }
-  });
+  const addParticipants = (events: WclEventNode[], idKey: "sourceID" | "targetID") =>
+    events.forEach((e) => {
+      const id = e[idKey];
+      if (typeof id === "number" && playerActorIds.has(id)) participantIds.add(id);
+    });
+  addParticipants(deathEvents, "targetID");
+  addParticipants(friendlyCastEvents, "sourceID");
+  addParticipants(damageEvents, "sourceID");
+  addParticipants(healingEvents, "sourceID");
 
   const consumableTimeline: Array<{
     time: string;
@@ -153,7 +134,7 @@ export const buildLogSummary = ({
     const type = classification.type;
 
     const sourceName = actorMap.get(event.sourceID) || `플레이어#${event.sourceID}`;
-    const timeSec = Math.max(0, Math.floor((event.timestamp - selectedFight.startTime) / 1000));
+    const timeSec = toFightSec(event.timestamp, selectedFight.startTime);
     const row = ensureConsumablePlayer(sourceName);
     if (type === "HEALTHSTONE") row.healthstone += 1;
     if (type === "HEALING_POTION") row.healingPotion += 1;
@@ -184,7 +165,7 @@ export const buildLogSummary = ({
   });
   consumableTimeline.sort((a, b) => a.timeSec - b.timeSec);
 
-  const deathSeconds = deathEvents.map((event) => Math.max(0, Math.floor(((event.timestamp || 0) - selectedFight.startTime) / 1000)));
+  const deathSeconds = deathEvents.map((event) => toFightSec(event.timestamp || 0, selectedFight.startTime));
   const fightDurationSec = Math.max(1, Math.floor((selectedFight.endTime - selectedFight.startTime) / 1000));
   const wipeTail = detectWipeTailStart(deathSeconds, fightDurationSec);
   const tailStartSec = wipeTail?.startSec ?? null;
@@ -193,13 +174,11 @@ export const buildLogSummary = ({
   const healingBySecond = new Map<number, number>();
   damageEvents.forEach((event) => {
     if (!event.timestamp || typeof event.sourceID !== "number" || !playerActorIds.has(event.sourceID)) return;
-    const sec = Math.max(0, Math.floor((event.timestamp - selectedFight.startTime) / 1000));
-    pushAmountToSecMap(damageBySecond, sec, getDamage(event));
+    pushAmountToSecMap(damageBySecond, toFightSec(event.timestamp, selectedFight.startTime), getDamage(event));
   });
   healingEvents.forEach((event) => {
     if (!event.timestamp || typeof event.sourceID !== "number" || !playerActorIds.has(event.sourceID)) return;
-    const sec = Math.max(0, Math.floor((event.timestamp - selectedFight.startTime) / 1000));
-    pushAmountToSecMap(healingBySecond, sec, event.amount);
+    pushAmountToSecMap(healingBySecond, toFightSec(event.timestamp, selectedFight.startTime), event.amount);
   });
 
   const bossCastBySecond = new Map<number, number>();
@@ -209,23 +188,23 @@ export const buildLogSummary = ({
   const defensiveCastEventsSimple: Array<{ time: string; timeSec: number; ability: string }> = [];
 
   enemyCastEvents.forEach((event) => {
-    const timeSec = Math.max(0, Math.floor(((event.timestamp || 0) - selectedFight.startTime) / 1000));
+    const timeSec = toFightSec(event.timestamp || 0, selectedFight.startTime);
     const ability = getAbilityName(event, abilityMap);
-    bossCastBySecond.set(timeSec, (bossCastBySecond.get(timeSec) || 0) + 1);
+    incrementSecMap(bossCastBySecond, timeSec);
     bossCastEventsSimple.push({ time: secondsToTime(timeSec), timeSec, ability });
   });
 
   defensiveCastEvents.forEach((event) => {
-    const timeSec = Math.max(0, Math.floor(((event.timestamp || 0) - selectedFight.startTime) / 1000));
+    const timeSec = toFightSec(event.timestamp || 0, selectedFight.startTime);
     const ability = getAbilityName(event, abilityMap);
-    defensiveCastBySecond.set(timeSec, (defensiveCastBySecond.get(timeSec) || 0) + 1);
+    incrementSecMap(defensiveCastBySecond, timeSec);
     defensiveCastEventsSimple.push({ time: secondsToTime(timeSec), timeSec, ability });
   });
 
   const deaths: DeathSummary[] = deathEvents.map((event) => {
     const ts = event.timestamp || selectedFight.startTime;
-    const timeSec = Math.max(0, Math.floor((ts - selectedFight.startTime) / 1000));
-    deathBySecond.set(timeSec, (deathBySecond.get(timeSec) || 0) + 1);
+    const timeSec = toFightSec(ts, selectedFight.startTime);
+    incrementSecMap(deathBySecond, timeSec);
     const playerName = actorMap.get(event.targetID || -1) || `대상#${event.targetID ?? "?"}`;
     const ability = getAbilityName(event, abilityMap);
 
@@ -261,25 +240,10 @@ export const buildLogSummary = ({
   const excludedTailDeaths = deaths.length - meaningfulDeaths.length;
   const deathStartSec = meaningfulDeaths.length > 0 ? meaningfulDeaths[0].timeSec : null;
 
-  const topCauses = Array.from(
-    meaningfulDeaths.reduce((acc, death) => {
-      acc.set(death.ability, (acc.get(death.ability) || 0) + 1);
-      return acc;
-    }, new Map<string, number>())
-  )
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8)
-    .map(([ability, count]) => ({ ability, count }));
+  const topCauses = countAndRank(meaningfulDeaths.map((d) => d.ability), 8)
+    .map(({ name, count }) => ({ ability: name, count }));
 
-  const playerDeaths = Array.from(
-    meaningfulDeaths.reduce((acc, death) => {
-      acc.set(death.playerName, (acc.get(death.playerName) || 0) + 1);
-      return acc;
-    }, new Map<string, number>())
-  )
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([name, count]) => ({ name, count }));
+  const playerDeaths = countAndRank(meaningfulDeaths.map((d) => d.playerName), 10);
 
   const defensiveMissingCount = meaningfulDeaths.filter((death) => death.defensives.length === 0).length;
 
@@ -303,27 +267,11 @@ export const buildLogSummary = ({
       const defensiveUseRate =
         deathsCount > 0 ? Number((((deathsCount - defensiveMissing) / deathsCount) * 100).toFixed(1)) : null;
 
-      const playerTopCauses = Array.from(
-        sorted.reduce((acc, entry) => {
-          acc.set(entry.ability, (acc.get(entry.ability) || 0) + 1);
-          return acc;
-        }, new Map<string, number>())
-      )
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([ability, count]) => ({ ability, count }));
+      const playerTopCauses = countAndRank(sorted.map((e) => e.ability), 3)
+        .map(({ name, count }) => ({ ability: name, count }));
 
-      const nearbyBossSkills = Array.from(
-        sorted.reduce((acc, entry) => {
-          entry.nearbyBossSkills.forEach((ability) => {
-            acc.set(ability, (acc.get(ability) || 0) + 1);
-          });
-          return acc;
-        }, new Map<string, number>())
-      )
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([ability, count]) => ({ ability, count }));
+      const nearbyBossSkills = countAndRank(sorted.flatMap((e) => e.nearbyBossSkills), 3)
+        .map(({ name, count }) => ({ ability: name, count }));
 
       let riskScore = deathsCount * 1.4 + defensiveMissing * 1.6;
       if (avgHpBeforeDeath !== null && avgHpBeforeDeath < 35) riskScore += 1.2;

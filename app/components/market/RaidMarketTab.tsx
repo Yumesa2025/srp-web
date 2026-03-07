@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import LazyImage from "@/app/components/LazyImage";
 
 const FALLBACK_ICON_URL = "https://wow.zamimg.com/images/wow/icons/large/inv_misc_questionmark.jpg";
 
-const passthroughLoader = ({ src }: { src: string }) => src;
 
 interface LedgerItem {
   rowId: string;
@@ -268,13 +267,9 @@ export default function RaidMarketTab() {
               {ledgerItems.map((item) => (
                 <div key={item.rowId} className="flex justify-between items-center p-3 bg-gray-800 rounded-md border border-gray-700 gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <Image
-                      loader={passthroughLoader}
-                      unoptimized
+                    <LazyImage
                       src={item.iconUrl}
                       alt={item.itemName}
-                      width={32}
-                      height={32}
                       className="w-8 h-8 rounded border border-gray-600 shrink-0"
                     />
                     <div className="min-w-0">

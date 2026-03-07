@@ -65,16 +65,7 @@ export async function POST(request: Request) {
       }
     `;
 
-    const fightRes = await fetch("https://www.warcraftlogs.com/api/v2/client", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ query: fightQuery }),
-      cache: "no-store",
-    });
-    const fightData = await fightRes.json();
+    const fightData = await fetchWclGraphQL(accessToken, fightQuery);
     if (fightData?.errors?.length) {
       throw new Error(fightData.errors[0].message || "WCL fight 조회 실패");
     }

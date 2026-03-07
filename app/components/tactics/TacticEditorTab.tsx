@@ -3,6 +3,7 @@
 import { BOSS_DATABASE, Difficulty, TimelineEvent } from "@/data/bossTimelines";
 import { PlayerData } from "@/app/types";
 import { MRTNode } from "@/app/types/mrt";
+import LazyImage from "@/app/components/LazyImage";
 
 interface TacticEditorTabProps {
   copyMrtNote: () => void;
@@ -252,7 +253,7 @@ export default function TacticEditorTab({
                       <div key={`boss-${sec}-${idx}`} className={`flex items-center justify-between p-2 bg-gray-800/80 border-l-4 border-red-500 rounded-r-md my-0.5 ${isHovered ? "opacity-50" : ""}`}>
                         <div className="flex items-center gap-3 flex-1 pointer-events-none min-w-0">
                           <span className="font-mono font-bold w-12 text-red-400 shrink-0">{ev.time}</span>
-                          {icon && <img src={icon} alt={realName} className="w-6 h-6 rounded border border-gray-700 shrink-0" />}
+                          {icon && <LazyImage src={icon} alt={realName} className="w-6 h-6 rounded border border-gray-700 shrink-0" />}
                           <span className="text-gray-200 font-bold truncate">{realName}</span>
                           <span className="text-[10px] px-2 py-0.5 bg-red-900/50 text-red-300 rounded border border-red-800 shrink-0">{ev.type}</span>
                         </div>
@@ -373,7 +374,7 @@ export default function TacticEditorTab({
             return (
               <div key={spell.spellId} className="bg-gray-900 p-3 rounded-lg border border-gray-600 flex flex-col gap-2 transition-all hover:border-purple-500">
                 <div className="flex items-center gap-2">
-                  {icon && <img src={icon} alt={realName} className="w-8 h-8 rounded border border-gray-700" />}
+                  {icon && <LazyImage src={icon} alt={realName} className="w-8 h-8 rounded border border-gray-700" />}
                   <div className="flex flex-col overflow-hidden">
                     <a
                       href={`https://ko.wowhead.com/spell=${spell.spellId}`}

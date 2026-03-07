@@ -1,19 +1,12 @@
+// helpers.ts의 DeathSummary와 동일하므로 re-export해 재사용
+export type { DeathSummary as ClinicDeathSummary, PlayerInsight as ClinicPlayerInsight } from "@/app/api/logs/helpers";
+import type { DeathSummary, PlayerInsight } from "@/app/api/logs/helpers";
+
 export interface ClinicLogTarget {
   reportId: string;
   fightId?: number;
   preferKill?: boolean;
   throughputStepSec?: number;
-}
-
-export interface ClinicDeathSummary {
-  playerName: string;
-  time: string;
-  timeSec: number;
-  ability: string;
-  damage: number | null;
-  hpPercentBefore: number | null;
-  defensives: string[];
-  nearbyBossSkills: string[];
 }
 
 export interface ClinicLogSummary {
@@ -39,20 +32,7 @@ export interface ClinicLogSummary {
   topCauses: { ability: string; count: number }[];
   playerDeaths: { name: string; count: number }[];
   defensiveMissingCount: number;
-  perPlayer: {
-    playerName: string;
-    deaths: number;
-    firstDeathTime: string | null;
-    lastDeathTime: string | null;
-    avgHpBeforeDeath: number | null;
-    defensiveMissingCount: number;
-    defensiveUseRate: number | null;
-    topCauses: { ability: string; count: number }[];
-    nearbyBossSkills: { ability: string; count: number }[];
-    deathTimes: string[];
-    risk: "HIGH" | "MEDIUM" | "LOW";
-    notes: string[];
-  }[];
+  perPlayer: PlayerInsight[];
   consumables: {
     timeline: {
       time: string;
@@ -100,7 +80,7 @@ export interface ClinicLogSummary {
     hps: number;
   }[];
   throughputStepSec: number;
-  firstMeaningfulDeaths: ClinicDeathSummary[];
+  firstMeaningfulDeaths: DeathSummary[];
   bossCoverage: {
     time: string;
     timeSec: number;
@@ -118,7 +98,7 @@ export interface ClinicLogSummary {
     deaths: number;
     cumulativeDeaths: number;
   }[];
-  deaths: ClinicDeathSummary[];
+  deaths: DeathSummary[];
 }
 
 export interface ClinicReportItem {
