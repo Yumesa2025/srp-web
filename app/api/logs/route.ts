@@ -180,9 +180,9 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    const reportNode = masterData?.data?.reportData?.report;
-    const abilities = (reportNode?.masterData?.abilities || []) as WclAbilityNode[];
-    const actors = (reportNode?.masterData?.actors || []) as WclActorNode[];
+    const masterReportNode = masterData?.data?.reportData?.report;
+    const abilities = (masterReportNode?.masterData?.abilities || []) as WclAbilityNode[];
+    const actors = (masterReportNode?.masterData?.actors || []) as WclActorNode[];
 
     const summary = buildLogSummary({
       reportId,
