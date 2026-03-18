@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import { PostHogProvider as PostHogReactProvider } from "posthog-js/react";
 
@@ -14,19 +14,18 @@ const posthogUiHost = posthogHost.includes("eu.i.posthog.com")
 let isInitialized = false;
 
 function PostHogPageviewTracker() {
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useLayoutEffect(() => {
-    if (!posthogKey || !pathname) return;
+    if (!posthogKey || typeof window === "undefined") return;
     console.log(posthog);
     const search = searchParams?.toString();
-    const url = `${window.location.origin}${pathname}${search ? `?${search}` : ""}`;
+    const url = `${window.location.origin}${window.location.pathname}${search ? `?${search}` : ""}`;
 
     posthog.capture("$pageview", {
       $current_url: url,
     });
-  }, [pathname, searchParams, posthog]);
+  }, [searchParams, posthog]);
 
   return null;
 }
