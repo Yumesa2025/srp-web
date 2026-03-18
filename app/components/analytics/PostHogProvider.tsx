@@ -19,7 +19,7 @@ function PostHogPageviewTracker() {
 
   useEffect(() => {
     if (!posthogKey || !pathname) return;
-
+    console.log(posthog);
     const search = searchParams?.toString();
     const url = `${window.location.origin}${pathname}${search ? `?${search}` : ""}`;
 
