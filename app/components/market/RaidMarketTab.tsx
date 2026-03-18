@@ -218,7 +218,7 @@ export default function RaidMarketTab() {
         <textarea
           value={ledgerInput}
           onChange={(e) => setLedgerInput(e.target.value)}
-          placeholder="애드온 장부를 붙여넣으세요. 예) 264183;하우머치하우머치;10000|260650;하우머치하우머치;10000"
+          placeholder="애드온 장부를 붙여넣으세요. 예) 264183;닉네임;10000|260650;닉네임;10000"
           rows={4}
           className="w-full p-3 bg-gray-900 border border-gray-600 rounded-lg text-green-300 font-mono text-sm outline-none focus:border-yellow-500 resize-y"
         />

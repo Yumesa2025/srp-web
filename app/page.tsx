@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { DEFENSIVE_SKILLS } from "@/app/constants/defensiveSkills";
@@ -60,7 +60,7 @@ const WOW_CLASSES = [
 ] as const;
 
 export default function Home() {
-  const [inputText, setInputText] = useState("하우머치하우머치-azshara");
+  const [inputText, setInputText] = useState("");
   const [players, setPlayers] = useState<PlayerData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>("ROSTER");
@@ -641,6 +641,7 @@ export default function Home() {
           <textarea
             className="w-full p-4 bg-gray-900 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500 resize-none"
             rows={3} value={inputText} onChange={(e) => setInputText(e.target.value)}
+            placeholder={"닉네임-azshara\n가로쉬-azshara\n스랄-hyjal"}
           />
           <button
             onClick={fetchRaidData} disabled={isLoading}
@@ -725,7 +726,7 @@ export default function Home() {
           />
         </div>
 
-        <div className="mb-10 p-6 md:p-7 rounded-2xl border-2 border-cyan-400/35 bg-gradient-to-br from-gray-800 via-gray-800/95 to-gray-900 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
+        <div className="mb-10 p-6 md:p-7 rounded-2xl border-2 border-cyan-400/35 bg-linear-to-br from-gray-800 via-gray-800/95 to-gray-900 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
             <div className="text-lg md:text-xl text-cyan-300 font-bold">직업 상태</div>
             <div className="text-xs md:text-sm text-gray-400">명단에 있는 직업은 직업색으로 표시됩니다.</div>

@@ -37,7 +37,7 @@ export function calcDamage(player: PlayerData, bossDamage: number) {
 
 // 메인 상태 관리 훅
 export function useRaidPlanner() {
-  const [inputText, setInputText]           = useState("하우머치하우머치-azshara");
+  const [inputText, setInputText]           = useState("");
   const [players, setPlayers]               = useState<PlayerData[]>([]);
   const [isLoading, setIsLoading]           = useState(false);
   const [bossDamage, setBossDamage]         = useState<number>(5000000);

@@ -10,6 +10,7 @@ interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 export default function LazyImage({ src, alt, className, ...props }: LazyImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const currentRef = imgRef.current;
@@ -35,14 +36,24 @@ export default function LazyImage({ src, alt, className, ...props }: LazyImagePr
   }, []);
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      ref={imgRef}
-      src={isVisible ? src : "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="} // 투명 플레이스홀더
-      alt={alt}
-      loading="lazy" // 브라우저 네이티브 lazy 로딩도 병행 적용
-      className={`transition-opacity duration-300 ease-in-out ${isVisible ? "opacity-100" : "opacity-0"} ${className || ""}`}
-      {...props}
-    />
+    <div className={`relative overflow-hidden ${className || ""}`}>
+      {/* 로딩 전 스켈레톤(Pulse) UI */}
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-gray-700 animate-pulse rounded" />
+      )}
+      
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        src={isVisible ? src : "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setIsLoaded(true)}
+        className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
+          isLoaded ? "opacity-100" : "opacity-0"
+        }`}
+        {...props}
+      />
+    </div>
   );
 }

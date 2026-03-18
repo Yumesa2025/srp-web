@@ -4,6 +4,102 @@ import { BOSS_DATABASE, Difficulty, TimelineEvent } from "@/data/bossTimelines";
 import { PlayerData } from "@/app/types";
 import { MRTNode } from "@/app/types/mrt";
 import LazyImage from "@/app/components/LazyImage";
+import { sharedClasses } from "@/app/styles/sharedClasses";
+
+const getStyles = () => ({
+  card: sharedClasses.card + " mb-8",
+  cardTitle: "block font-bold text-xl mb-4",
+  headerContainer: "flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4",
+  headerLabelContainer: "flex items-center gap-3",
+  headerLabel: "block text-green-400 font-bold text-xl",
+  copyButton: sharedClasses.button.primary,
+  
+  controlsContainer: "flex gap-4 items-center",
+  select: sharedClasses.input.base,
+  difficultyGroup: "flex bg-gray-900 rounded-md p-1 border border-gray-600",
+  difficultyBtn: "px-4 py-1 rounded-sm font-bold transition-colors",
+  difficultyBtnActiveH: "bg-blue-600 text-white",
+  difficultyBtnActiveM: "bg-purple-600 text-white",
+  difficultyBtnInactive: "text-gray-400 hover:text-white",
+
+  addNodeContainer: "flex flex-wrap gap-4 items-end mb-6 bg-gray-900 p-4 rounded-lg border border-gray-700 shadow-inner",
+  inputGroup: "flex flex-col",
+  inputLabel: "text-xs text-gray-400 mb-1",
+  timeInput: "w-20 p-2 bg-gray-800 border border-gray-600 rounded text-yellow-400 text-center font-mono font-bold focus:border-green-500 outline-none",
+  flexibleInputGroup: "flex flex-col flex-1 min-w-[150px]",
+  innerSelect: sharedClasses.input.select,
+  addNodeBtn: sharedClasses.button.success,
+  toggleTicksBtnBase: sharedClasses.button.outline,
+  toggleTicksOff: "bg-emerald-700 hover:bg-emerald-600 text-white border-emerald-500",
+  toggleTicksOn: "bg-gray-700 hover:bg-gray-600 text-gray-100 border-gray-500",
+
+  timelineContainer: "bg-gray-900 rounded-lg p-2 border border-gray-600 max-h-[600px] overflow-y-auto flex flex-col relative",
+  emptyTimeline: "text-gray-500 text-sm text-center py-6",
+  tickWrapperBase: "flex flex-col border-b border-gray-700/60 transition-all",
+  tickWrapperHovered: "bg-green-900/40 min-h-[44px] border-green-500/50 outline outline-green-400 z-10",
+  emptyTickBase: "flex items-center",
+  emptyTickHovered: "h-full justify-center px-2",
+  emptyTickNormal: "h-[28px] px-2 hover:bg-gray-800/50 cursor-crosshair transition-all",
+  snapText: "text-green-400 text-xs font-bold font-mono animate-pulse",
+  tickTime: "text-gray-400 text-xs font-mono leading-none w-12 shrink-0",
+  tickLine: "flex-1 border-t border-dashed border-gray-700/80",
+
+  bossEventBase: "flex items-center justify-between p-2 bg-gray-800/80 border-l-4 border-red-500 rounded-r-md my-0.5",
+  bossEventInfo: "flex items-center gap-3 flex-1 pointer-events-none min-w-0",
+  bossEventTime: "font-mono font-bold w-12 text-red-400 shrink-0",
+  eventIcon: "w-6 h-6 rounded border border-gray-700 shrink-0",
+  eventName: "text-gray-200 font-bold truncate",
+  bossEventType: "text-[10px] px-2 py-0.5 bg-red-900/50 text-red-300 rounded border border-red-800 shrink-0",
+  useTimingBtn: "text-xs px-3 py-1 bg-gray-700 hover:bg-green-600 text-white rounded transition-colors",
+
+  playerEventBase: "flex items-center justify-between p-2 ml-8 border-l-4 rounded-r-md my-0.5 cursor-grab active:cursor-grabbing transition-colors",
+  playerEventWarning: "bg-red-900/30 border-red-500 hover:bg-red-800/50 shadow-[0_0_8px_rgba(239,68,68,0.3)]",
+  playerEventNormal: "bg-green-900/30 border-green-500 hover:bg-green-800/50 shadow-md",
+  playerEventInfo: "flex items-center gap-3",
+  dragHandle: "text-gray-400 cursor-grab",
+  timeEditInputBase: "w-16 p-1 rounded border text-center text-xs font-mono font-bold outline-none",
+  timeEditWarning: "bg-red-950/40 border-red-700 text-red-300 focus:border-red-500",
+  timeEditNormal: "bg-green-950/40 border-green-700 text-green-300 focus:border-green-500",
+  timeTextBase: "font-mono font-bold w-12 text-left underline decoration-dotted underline-offset-2",
+  timeTextWarning: "text-red-400",
+  timeTextNormal: "text-green-400",
+  playerName: "text-white font-bold",
+  spellNameWarning: "text-red-300",
+  spellNameNormal: "text-green-300",
+  cooldownWarningTag: "text-red-400 text-[11px] font-bold ml-2 bg-red-950/50 px-2 py-0.5 rounded border border-red-800/50",
+  cdContainer: "flex items-center gap-2",
+  cdLabel: "text-xs text-gray-500",
+  cdInputBase: "w-14 p-1 bg-gray-900 border border-gray-700 rounded text-center font-bold text-xs outline-none",
+  cdInputWarning: "text-red-300 focus:border-red-500",
+  cdInputNormal: "text-green-300 focus:border-green-500",
+  deleteBtn: "ml-2 text-gray-500 hover:text-red-400 font-bold",
+
+  dictCard: "mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700",
+  dictTitle: "block text-yellow-400 font-bold text-lg mb-2",
+  dictDesc: "text-gray-400 text-sm mb-4",
+  dictGrid: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4",
+  spellCard: "bg-gray-900 p-3 rounded-lg border border-gray-600 flex flex-col gap-2 transition-all hover:border-purple-500",
+  spellHeader: "flex items-center gap-2",
+  spellIcon: "w-8 h-8 rounded border border-gray-700",
+  spellInfo: "flex flex-col overflow-hidden",
+  spellLink: "font-bold text-gray-200 truncate hover:text-blue-400 hover:underline transition-colors cursor-pointer",
+  spellIdText: "text-xs text-gray-500 font-mono",
+  spellDesc: "text-xs text-gray-400 mt-1 leading-snug wrap-break-word whitespace-normal",
+  selectGroup: "flex gap-2 mt-1",
+  typeSelect: sharedClasses.input.select + " text-sm p-1 flex-1 focus:border-blue-500",
+  dangerSelect: sharedClasses.input.select + " text-sm p-1 flex-1 focus:border-red-500",
+  memoTextarea: "mt-2 w-full min-h-[68px] text-xs p-2 bg-gray-800 border border-gray-600 rounded text-gray-200 placeholder:text-gray-500 focus:border-yellow-500 outline-none resize-y",
+
+  aiCard: "mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border-2 border-purple-500/50 relative overflow-hidden",
+  aiGradientBar: "absolute top-0 left-0 w-full h-1 bg-linear-to-r from-purple-600 to-blue-500",
+  aiHeaderContainer: "flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4",
+  aiTitle: "block text-purple-400 font-bold text-xl mb-1",
+  aiDesc: "text-gray-400 text-sm",
+  aiButton: "px-6 py-3 bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-gray-700 disabled:to-gray-700 rounded-md font-bold text-white shadow-lg transition-all",
+  aiOutput: "bg-gray-900 rounded-lg p-6 border border-gray-600 text-gray-200 whitespace-pre-wrap font-sans leading-relaxed",
+  
+  opacity50: "opacity-50"
+});
 
 interface TacticEditorTabProps {
   copyMrtNote: () => void;
@@ -91,24 +187,22 @@ export default function TacticEditorTab({
   aiTactic,
 }: TacticEditorTabProps) {
   const healersCount = players.filter((p) => p.role === "HEALER").length;
+  const s = getStyles();
 
   return (
     <>
-      <div className="mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border-2 border-green-500/50">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-          <div className="flex items-center gap-3">
-            <label className="block text-green-400 font-bold text-xl">📝 전술 타임라인 에디터 (보스 스킬 & 생존기 배분)</label>
-            <button
-              onClick={copyMrtNote}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95"
-            >
+      <div className={`${s.card} border-2 border-green-500/50`}>
+        <div className={s.headerContainer}>
+          <div className={s.headerLabelContainer}>
+            <label className={s.headerLabel}>📝 전술 타임라인 에디터 (보스 스킬 & 생존기 배분)</label>
+            <button onClick={copyMrtNote} className={s.copyButton}>
               <span>📋 MRT 노드 복사</span>
             </button>
           </div>
 
-          <div className="flex gap-4 items-center">
+          <div className={s.controlsContainer}>
             <select
-              className="p-2 bg-gray-900 border border-gray-600 rounded-md text-white focus:outline-none focus:border-green-500"
+              className={s.select}
               value={selectedBossId}
               onChange={(e) => onSelectedBossIdChange(Number(e.target.value))}
             >
@@ -119,16 +213,16 @@ export default function TacticEditorTab({
               ))}
             </select>
 
-            <div className="flex bg-gray-900 rounded-md p-1 border border-gray-600">
+            <div className={s.difficultyGroup}>
               <button
                 onClick={() => onDifficultyChange("Heroic")}
-                className={`px-4 py-1 rounded-sm font-bold transition-colors ${difficulty === "Heroic" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"}`}
+                className={`${s.difficultyBtn} ${difficulty === "Heroic" ? s.difficultyBtnActiveH : s.difficultyBtnInactive}`}
               >
                 영웅 (Heroic)
               </button>
               <button
                 onClick={() => onDifficultyChange("Mythic")}
-                className={`px-4 py-1 rounded-sm font-bold transition-colors ${difficulty === "Mythic" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}
+                className={`${s.difficultyBtn} ${difficulty === "Mythic" ? s.difficultyBtnActiveM : s.difficultyBtnInactive}`}
               >
                 신화 (Mythic)
               </button>
@@ -136,25 +230,25 @@ export default function TacticEditorTab({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 items-end mb-6 bg-gray-900 p-4 rounded-lg border border-gray-700 shadow-inner">
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-400 mb-1">시간 (MM:SS)</label>
+        <div className={s.addNodeContainer}>
+          <div className={s.inputGroup}>
+            <label className={s.inputLabel}>시간 (MM:SS)</label>
             <input
               type="text"
               value={newNodeTime}
               onChange={(e) => onNewNodeTimeChange(e.target.value)}
-              className="w-20 p-2 bg-gray-800 border border-gray-600 rounded text-yellow-400 text-center font-mono font-bold focus:border-green-500 outline-none"
+              className={s.timeInput}
             />
           </div>
-          <div className="flex flex-col flex-1 min-w-[150px]">
-            <label className="text-xs text-gray-400 mb-1">누구의 생존기를 쓸까?</label>
+          <div className={s.flexibleInputGroup}>
+            <label className={s.inputLabel}>누구의 생존기를 쓸까?</label>
             <select
               value={newNodePlayerId}
               onChange={(e) => {
                 onNewNodePlayerIdChange(e.target.value);
                 onNewNodeSpellChange("");
               }}
-              className="p-2 bg-gray-800 border border-gray-600 rounded text-white outline-none"
+              className={s.innerSelect}
             >
               <option value="">-- 힐러 / 생존기 보유자 선택 --</option>
               {players
@@ -166,13 +260,13 @@ export default function TacticEditorTab({
                 ))}
             </select>
           </div>
-          <div className="flex flex-col flex-1 min-w-[150px]">
-            <label className="text-xs text-gray-400 mb-1">어떤 스킬?</label>
+          <div className={s.flexibleInputGroup}>
+            <label className={s.inputLabel}>어떤 스킬?</label>
             <select
               value={newNodeSpell}
               onChange={(e) => onNewNodeSpellChange(e.target.value)}
               disabled={!newNodePlayerId}
-              className="p-2 bg-gray-800 border border-gray-600 rounded text-white disabled:opacity-50 outline-none"
+              className={`${s.innerSelect} disabled:opacity-50`}
             >
               <option value="">-- 스킬 선택 --</option>
               {players
@@ -187,25 +281,21 @@ export default function TacticEditorTab({
           <button
             onClick={addMrtNode}
             disabled={!newNodeTime || !newNodePlayerId || !newNodeSpell}
-            className="px-6 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 rounded font-bold text-white transition-colors"
+            className={s.addNodeBtn}
           >
             + 이 시간에 배치
           </button>
           <button
             onClick={onToggleShowEmptyTicks}
-            className={`px-4 py-2 rounded font-bold transition-colors border ${
-              showEmptyTicks
-                ? "bg-gray-700 hover:bg-gray-600 text-gray-100 border-gray-500"
-                : "bg-emerald-700 hover:bg-emerald-600 text-white border-emerald-500"
-            }`}
+            className={`${s.toggleTicksBtnBase} ${showEmptyTicks ? s.toggleTicksOn : s.toggleTicksOff}`}
           >
             {showEmptyTicks ? "빈 눈금 숨기기" : "빈 눈금 보이기"}
           </button>
         </div>
 
-        <div className="bg-gray-900 rounded-lg p-2 border border-gray-600 max-h-[600px] overflow-y-auto flex flex-col relative">
+        <div className={s.timelineContainer}>
           {visibleTimelineSeconds.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-6">표시할 타임라인 이벤트가 없습니다.</p>
+            <p className={s.emptyTimeline}>표시할 타임라인 이벤트가 없습니다.</p>
           ) : (
             visibleTimelineSeconds.map((sec) => {
               const timeStr = secondsToTime(sec);
@@ -229,18 +319,16 @@ export default function TacticEditorTab({
                     onDraggedMrtNodeIdChange(null);
                     onDragHoverTimeChange(null);
                   }}
-                  className={`flex flex-col border-b border-gray-700/60 transition-all ${
-                    isHovered ? "bg-green-900/40 min-h-[44px] border-green-500/50 outline outline-1 outline-green-400 z-10" : ""
-                  }`}
+                  className={`${s.tickWrapperBase} ${isHovered ? s.tickWrapperHovered : ""}`}
                 >
                   {!hasEvent && (
-                    <div className={`flex items-center ${isHovered ? "h-full justify-center px-2" : "h-[28px] px-2 hover:bg-gray-800/50 cursor-crosshair transition-all"}`}>
+                    <div className={`${s.emptyTickBase} ${isHovered ? s.emptyTickHovered : s.emptyTickNormal}`}>
                       {isHovered ? (
-                        <span className="text-green-400 text-xs font-bold font-mono animate-pulse">{timeStr} 에 스냅 🎯</span>
+                        <span className={s.snapText}>{timeStr} 에 스냅 🎯</span>
                       ) : (
                         <>
-                          <span className="text-gray-400 text-xs font-mono leading-none w-12 shrink-0">{timeStr}</span>
-                          <div className="flex-1 border-t border-dashed border-gray-700/80" />
+                          <span className={s.tickTime}>{timeStr}</span>
+                          <div className={s.tickLine} />
                         </>
                       )}
                     </div>
@@ -250,15 +338,15 @@ export default function TacticEditorTab({
                     const realName = spellDetails[ev.spellId]?.name || ev.spellName;
                     const icon = spellDetails[ev.spellId]?.iconUrl;
                     return (
-                      <div key={`boss-${sec}-${idx}`} className={`flex items-center justify-between p-2 bg-gray-800/80 border-l-4 border-red-500 rounded-r-md my-0.5 ${isHovered ? "opacity-50" : ""}`}>
-                        <div className="flex items-center gap-3 flex-1 pointer-events-none min-w-0">
-                          <span className="font-mono font-bold w-12 text-red-400 shrink-0">{ev.time}</span>
-                          {icon && <LazyImage src={icon} alt={realName} className="w-6 h-6 rounded border border-gray-700 shrink-0" />}
-                          <span className="text-gray-200 font-bold truncate">{realName}</span>
-                          <span className="text-[10px] px-2 py-0.5 bg-red-900/50 text-red-300 rounded border border-red-800 shrink-0">{ev.type}</span>
+                      <div key={`boss-${sec}-${idx}`} className={`${s.bossEventBase} ${isHovered ? s.opacity50 : ""}`}>
+                        <div className={s.bossEventInfo}>
+                          <span className={s.bossEventTime}>{ev.time}</span>
+                          {icon && <LazyImage src={icon} alt={realName} className={s.eventIcon} />}
+                          <span className={s.eventName}>{realName}</span>
+                          <span className={s.bossEventType}>{ev.type}</span>
                         </div>
                         {!isHovered && (
-                          <button onClick={() => onNewNodeTimeChange(ev.time)} className="text-xs px-3 py-1 bg-gray-700 hover:bg-green-600 text-white rounded transition-colors">
+                          <button onClick={() => onNewNodeTimeChange(ev.time)} className={s.useTimingBtn}>
                             이 타이밍 👆
                           </button>
                         )}
@@ -281,14 +369,10 @@ export default function TacticEditorTab({
                           onDraggedMrtNodeIdChange(null);
                           onDragHoverTimeChange(null);
                         }}
-                        className={`flex items-center justify-between p-2 ml-8 border-l-4 rounded-r-md my-0.5 cursor-grab active:cursor-grabbing transition-colors ${
-                          hasWarning
-                            ? "bg-red-900/30 border-red-500 hover:bg-red-800/50 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                            : "bg-green-900/30 border-green-500 hover:bg-green-800/50 shadow-md"
-                        } ${isHovered ? "opacity-50" : ""}`}
+                        className={`${s.playerEventBase} ${hasWarning ? s.playerEventWarning : s.playerEventNormal} ${isHovered ? s.opacity50 : ""}`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-gray-400 cursor-grab">↕️</span>
+                        <div className={s.playerEventInfo}>
+                          <span className={s.dragHandle}>↕️</span>
                           {editingNodeId === node.id ? (
                             <input
                               autoFocus
@@ -307,11 +391,7 @@ export default function TacticEditorTab({
                                 }
                               }}
                               onMouseDown={(e) => e.stopPropagation()}
-                              className={`w-16 p-1 rounded border text-center text-xs font-mono font-bold outline-none ${
-                                hasWarning
-                                  ? "bg-red-950/40 border-red-700 text-red-300 focus:border-red-500"
-                                  : "bg-green-950/40 border-green-700 text-green-300 focus:border-green-500"
-                              }`}
+                              className={`${s.timeEditInputBase} ${hasWarning ? s.timeEditWarning : s.timeEditNormal}`}
                             />
                           ) : (
                             <button
@@ -321,33 +401,29 @@ export default function TacticEditorTab({
                                 startEditingNodeTime(node);
                               }}
                               onMouseDown={(e) => e.stopPropagation()}
-                              className={`font-mono font-bold w-12 text-left underline decoration-dotted underline-offset-2 ${
-                                hasWarning ? "text-red-400" : "text-green-400"
-                              }`}
+                              className={`${s.timeTextBase} ${hasWarning ? s.timeTextWarning : s.timeTextNormal}`}
                               title="클릭해서 시간 수정"
                             >
                               {node.time}
                             </button>
                           )}
-                          <span className="text-white font-bold">{node.playerName}</span>
-                          <span className={hasWarning ? "text-red-300" : "text-green-300"}>👉 {node.spellName}</span>
+                          <span className={s.playerName}>{node.playerName}</span>
+                          <span className={hasWarning ? s.spellNameWarning : s.spellNameNormal}>👉 {node.spellName}</span>
                           {hasWarning && (
-                            <span className="text-red-400 text-[11px] font-bold ml-2 bg-red-950/50 px-2 py-0.5 rounded border border-red-800/50">
+                            <span className={s.cooldownWarningTag}>
                               아직 쿨타임이 안 왔습니다
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">쿨타임(초):</span>
+                        <div className={s.cdContainer}>
+                          <span className={s.cdLabel}>쿨타임(초):</span>
                           <input
                             type="number"
                             value={node.cooldown}
                             onChange={(e) => updateNodeCooldown(node.id, Number(e.target.value))}
-                            className={`w-14 p-1 bg-gray-900 border border-gray-700 rounded text-center font-bold text-xs outline-none ${
-                              hasWarning ? "text-red-300 focus:border-red-500" : "text-green-300 focus:border-green-500"
-                            }`}
+                            className={`${s.cdInputBase} ${hasWarning ? s.cdInputWarning : s.cdInputNormal}`}
                           />
-                          <button onClick={() => removeMrtNode(node.id)} className="ml-2 text-gray-500 hover:text-red-400 font-bold">
+                          <button onClick={() => removeMrtNode(node.id)} className={s.deleteBtn}>
                             ✕
                           </button>
                         </div>
@@ -361,41 +437,41 @@ export default function TacticEditorTab({
         </div>
       </div>
 
-      <div className="mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
-        <label className="block text-yellow-400 font-bold text-lg mb-2">📖 보스 스킬 사전 (AI 학습용)</label>
-        <p className="text-gray-400 text-sm mb-4">AI가 택틱을 정확하게 짤 수 있도록, 아래 스킬들의 피해 유형과 위험도를 미리 지정해 주세요.</p>
+      <div className={s.dictCard}>
+        <label className={s.dictTitle}>📖 보스 스킬 사전 (AI 학습용)</label>
+        <p className={s.dictDesc}>AI가 택틱을 정확하게 짤 수 있도록, 아래 스킬들의 피해 유형과 위험도를 미리 지정해 주세요.</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={s.dictGrid}>
           {uniqueSpells.map((spell) => {
             const realName = spellDetails[spell.spellId]?.name || spell.spellName;
             const icon = spellDetails[spell.spellId]?.iconUrl;
             const description = spellDetails[spell.spellId]?.description;
 
             return (
-              <div key={spell.spellId} className="bg-gray-900 p-3 rounded-lg border border-gray-600 flex flex-col gap-2 transition-all hover:border-purple-500">
-                <div className="flex items-center gap-2">
-                  {icon && <LazyImage src={icon} alt={realName} className="w-8 h-8 rounded border border-gray-700" />}
-                  <div className="flex flex-col overflow-hidden">
+              <div key={spell.spellId} className={s.spellCard}>
+                <div className={s.spellHeader}>
+                  {icon && <LazyImage src={icon} alt={realName} className={s.spellIcon} />}
+                  <div className={s.spellInfo}>
                     <a
                       href={`https://ko.wowhead.com/spell=${spell.spellId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-bold text-gray-200 truncate hover:text-blue-400 hover:underline transition-colors cursor-pointer"
+                      className={s.spellLink}
                     >
                       {realName}
                     </a>
-                    <span className="text-xs text-gray-500 font-mono">ID: {spell.spellId}</span>
+                    <span className={s.spellIdText}>ID: {spell.spellId}</span>
                     {description && (
-                      <p className="text-xs text-gray-400 mt-1 leading-snug break-words whitespace-normal">
+                      <p className={s.spellDesc}>
                         {description}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-1">
+                <div className={s.selectGroup}>
                   <select
-                    className="text-sm p-1 bg-gray-800 border border-gray-600 rounded text-white flex-1 focus:border-blue-500 outline-none"
+                    className={s.typeSelect}
                     value={spellConfig[spell.spellId]?.type || "광역"}
                     onChange={(e) => handleSpellConfigChange(spell.spellId, "type", e.target.value)}
                   >
@@ -406,7 +482,7 @@ export default function TacticEditorTab({
                   </select>
 
                   <select
-                    className="text-sm p-1 bg-gray-800 border border-gray-600 rounded text-white flex-1 focus:border-red-500 outline-none"
+                    className={s.dangerSelect}
                     value={spellConfig[spell.spellId]?.danger || "보통"}
                     onChange={(e) => handleSpellConfigChange(spell.spellId, "danger", e.target.value)}
                   >
@@ -418,7 +494,7 @@ export default function TacticEditorTab({
                 </div>
 
                 <textarea
-                  className="mt-2 w-full min-h-[68px] text-xs p-2 bg-gray-800 border border-gray-600 rounded text-gray-200 placeholder:text-gray-500 focus:border-yellow-500 outline-none resize-y"
+                  className={s.memoTextarea}
                   placeholder="📝 공대장 메모: 예) 산개 유지라 뭉치는 생존기 금지 / 채널링 마지막 2초 중첩 필요"
                   value={spellConfig[spell.spellId]?.memo || ""}
                   onChange={(e) => handleSpellConfigChange(spell.spellId, "memo", e.target.value)}
@@ -429,25 +505,25 @@ export default function TacticEditorTab({
         </div>
       </div>
 
-      <div className="mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border-2 border-purple-500/50 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-purple-600 to-blue-500"></div>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+      <div className={s.aiCard}>
+        <div className={s.aiGradientBar}></div>
+        <div className={s.aiHeaderContainer}>
           <div>
-            <label className="block text-purple-400 font-bold text-xl mb-1">🤖 AI 공대장 생존기 배분</label>
-            <p className="text-gray-400 text-sm">타임라인과 현재 배치된 힐러 명단을 분석하여 최적의 생존기 택틱을 생성합니다.</p>
+            <label className={s.aiTitle}>🤖 AI 공대장 생존기 배분</label>
+            <p className={s.aiDesc}>타임라인과 현재 배치된 힐러 명단을 분석하여 최적의 생존기 택틱을 생성합니다.</p>
           </div>
 
           <button
             onClick={generateAiTactic}
             disabled={isAiLoading || healersCount === 0}
-            className="px-6 py-3 bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-gray-700 disabled:to-gray-700 rounded-md font-bold text-white shadow-lg transition-all"
+            className={s.aiButton}
           >
             {isAiLoading ? "택틱 계산 중..." : "AI 택틱 짜기"}
           </button>
         </div>
 
         {aiTactic && (
-          <div className="bg-gray-900 rounded-lg p-6 border border-gray-600 text-gray-200 whitespace-pre-wrap font-sans leading-relaxed">
+          <div className={s.aiOutput}>
             {aiTactic}
           </div>
         )}
