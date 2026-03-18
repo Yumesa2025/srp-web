@@ -384,7 +384,7 @@ export async function GET(request: Request) {
     const result = {
       name: profileName,
       health: statsData.health,
-      armor: statsData.armor.effective,
+      armor: statsData.armor?.effective ?? 0,
       versatility: statsData.versatility,
       activeSpec: activeSpecName, // 추가: 현재 전문화
       talents: talentNames,       // 추가: 찍은 스킬(특성) 전체 목록
