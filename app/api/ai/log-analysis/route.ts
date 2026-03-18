@@ -95,6 +95,14 @@ interface AnalysisInputLog {
   }[];
 }
 
+interface MinimaxResponse {
+  choices?: {
+    message?: {
+      content?: string;
+    };
+  }[];
+}
+
 const compactLog = (log: AnalysisInputLog) => ({
   reportId: log.reportId,
   fight: log.fight,
@@ -157,8 +165,8 @@ const buildFallbackAnalysis = (log: AnalysisInputLog) => {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const failedLog = body?.failedLog as AnalysisInputLog | undefined;
+    const body = (await request.json()) as { failedLog?: AnalysisInputLog };
+    const failedLog = body.failedLog;
     if (!failedLog) {
       return NextResponse.json({ error: "failedLog 데이터가 필요합니다." }, { status: 400 });
     }
@@ -207,8 +215,8 @@ ${JSON.stringify(compactLog(failedLog), null, 2)}
         throw new Error(`Minimax API 에러: ${response.status} - ${errText}`);
     }
 
-    const data = await response.json();
-    const analysis = data.choices[0]?.message?.content || "AI 분석 결과를 생성하지 못했습니다.";
+    const data = (await response.json()) as MinimaxResponse;
+    const analysis = data.choices?.[0]?.message?.content || "AI 분석 결과를 생성하지 못했습니다.";
     return NextResponse.json({ analysis });
 
   } catch (error: unknown) {

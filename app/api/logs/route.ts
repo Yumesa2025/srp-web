@@ -11,12 +11,17 @@ import { buildLogSummary } from "./buildSummary";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const rawReportId = typeof body?.reportId === "string" ? body.reportId : "";
+    const body = (await request.json()) as {
+      reportId?: string;
+      fightId?: number;
+      preferKill?: boolean;
+      throughputStepSec?: number;
+    };
+    const rawReportId = typeof body.reportId === "string" ? body.reportId : "";
     const reportId = rawReportId.replace(/[^A-Za-z0-9]/g, "");
-    const fightId = typeof body?.fightId === "number" ? Math.floor(body.fightId) : undefined;
-    const preferKill = Boolean(body?.preferKill);
-    const rawThroughputStepSec = Number(body?.throughputStepSec);
+    const fightId = typeof body.fightId === "number" ? Math.floor(body.fightId) : undefined;
+    const preferKill = Boolean(body.preferKill);
+    const rawThroughputStepSec = Number(body.throughputStepSec);
     const throughputStepSec =
       Number.isFinite(rawThroughputStepSec) && rawThroughputStepSec >= 1
         ? Math.min(30, Math.floor(rawThroughputStepSec))
@@ -42,8 +47,8 @@ export async function POST(request: Request) {
       body: "grant_type=client_credentials",
       cache: "no-store",
     });
-    const tokenData = await tokenRes.json();
-    const accessToken = tokenData?.access_token as string | undefined;
+    const tokenData = (await tokenRes.json()) as { access_token?: string };
+    const accessToken = tokenData.access_token;
     if (!accessToken) {
       return NextResponse.json({ error: "WCL 토큰 발급 실패" }, { status: 500 });
     }

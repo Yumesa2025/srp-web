@@ -26,6 +26,11 @@ interface ItemMeta {
   iconUrl: string;
 }
 
+interface ItemBatchResponse {
+  error?: string;
+  items?: Record<string, ItemMeta>;
+}
+
 function sanitizeGold(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.floor(value));
@@ -89,12 +94,12 @@ export default function RaidMarketTab() {
     setIsItemMetaLoading(true);
     try {
       const res = await fetch(`/api/item/batch?ids=${idsToFetch.join(",")}`);
-      const data = await res.json();
+      const data = (await res.json()) as ItemBatchResponse;
       if (!res.ok) {
-        throw new Error(data?.error || "아이템 정보를 불러오지 못했습니다.");
+        throw new Error(data.error || "아이템 정보를 불러오지 못했습니다.");
       }
 
-      const incoming = (data?.items || {}) as Record<string, ItemMeta>;
+      const incoming = data.items || {};
       Object.entries(incoming).forEach(([id, meta]) => {
         if (!/^\d+$/.test(id)) return;
         itemMetaCacheRef.current.set(id, {

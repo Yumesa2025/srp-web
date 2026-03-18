@@ -10,6 +10,7 @@ import MainTabs from "@/app/components/MainTabs";
 import ClinicAnalysisTab from "@/app/components/clinic/ClinicAnalysisTab";
 import TacticEditorTab from "@/app/components/tactics/TacticEditorTab";
 import RaidMarketTab from "@/app/components/market/RaidMarketTab";
+import RosterManager from "@/app/components/RosterManager";
 
 import { BOSS_DATABASE, Difficulty } from "../data/bossTimelines";
 
@@ -125,17 +126,20 @@ export default function Home() {
       chunks.push(missingSpellIds.slice(i, i + CHUNK_SIZE));
     }
 
-    const fetchSpellDetailsBatch = async () => {
+  const fetchSpellDetailsBatch = async () => {
       try {
         const responses = await Promise.all(
           chunks.map(async (chunk) => {
             const query = chunk.join(",");
             const res = await fetch(`/api/spell/batch?ids=${query}`);
-            const data = await res.json();
+            const data = (await res.json()) as {
+              error?: string;
+              spells?: Record<string, { name: string; iconUrl: string; description?: string }>;
+            };
             if (!res.ok) {
-              throw new Error(data?.error || "스킬 배치 로드 실패");
+              throw new Error(data.error || "스킬 배치 로드 실패");
             }
-            return data.spells as Record<string, { name: string; iconUrl: string; description?: string }>;
+            return data.spells || {};
           })
         );
 
@@ -229,18 +233,47 @@ export default function Home() {
       }
 
       try {
-        const res  = await fetch(`/api/character?realm=${realm}&name=${name}`);
-        const data = await res.json();
+        const params = new URLSearchParams({
+          realm,
+          name,
+        });
+        const res  = await fetch(`/api/character?${params.toString()}`);
+        const data = (await res.json()) as {
+          error?: string;
+          name?: string;
+          realm?: string;
+          realmName?: string;
+          health?: number;
+          armor?: number;
+          versatility?: number;
+          activeSpec?: string;
+          talents?: string[];
+          itemLevel?: number;
+          className?: string;
+          bestPerfAvg?: number | null;
+          bestPerfDetails?: PlayerData["bestPerfDetails"];
+        };
 
         if (!res.ok) {
           newPlayers.push({ id, name, realm, role: "UNASSIGNED", error: data.error });
         } else {
+          const resolvedName = typeof data.name === "string" && data.name.trim() ? data.name : name;
+          const resolvedRealm = typeof data.realm === "string" && data.realm.trim() ? data.realm : realm;
+          const resolvedId = `${resolvedName}-${resolvedRealm}`.toLowerCase();
+          if (existingIds.has(resolvedId) || requestedIds.has(resolvedId)) {
+            continue;
+          }
+          requestedIds.add(resolvedId);
+
           // 💡 [수정됨] 처음 불러올 때 모든 생존기를 '켜짐(true)' 상태로 저장
           const myDefensives = data.talents?.filter((t: string) => DEFENSIVE_SKILLS.includes(t)) || [];
           const defensivesWithState = myDefensives.map((d: string) => ({ name: d, isActive: true }));
 
           newPlayers.push({
-            id, name: data.name, realm,
+            id: resolvedId,
+            name: resolvedName,
+            realm: resolvedRealm,
+            realmName: typeof data.realmName === "string" ? data.realmName : undefined,
             health: data.health, armor: data.armor, versatility: data.versatility,
             activeSpec: data.activeSpec, talents: data.talents,
             itemLevel: data.itemLevel,
@@ -317,11 +350,14 @@ export default function Home() {
         }),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as {
+        error?: string;
+        tactic?: string;
+      };
       if (data.error) {
         setAiTactic(`에러 발생: ${data.error}`);
       } else {
-        setAiTactic(data.tactic);
+        setAiTactic(data.tactic || "AI가 전술을 반환하지 않았습니다.");
       }
     } catch {
       setAiTactic("AI 통신 중 에러가 발생했습니다.");
@@ -352,9 +388,12 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(target),
     });
-    const data = await res.json();
+    const data = (await res.json()) as {
+      error?: string;
+      summary?: ClinicLogSummary;
+    };
     if (!res.ok) {
-      throw new Error(data?.error || "로그 요약을 가져오지 못했습니다.");
+      throw new Error(data.error || "로그 요약을 가져오지 못했습니다.");
     }
     return data.summary as ClinicLogSummary;
   };
@@ -407,9 +446,12 @@ export default function Home() {
         failedLog: summary,
       }),
     });
-    const aiData = await aiRes.json();
+    const aiData = (await aiRes.json()) as {
+      error?: string;
+      analysis?: string;
+    };
     if (!aiRes.ok) {
-      throw new Error(aiData?.error || "AI 분석에 실패했습니다.");
+      throw new Error(aiData.error || "AI 분석에 실패했습니다.");
     }
     return aiData.analysis || "분석 결과가 비어 있습니다.";
   };
@@ -637,7 +679,13 @@ export default function Home() {
 
         {/* 1. 파티원 명단 */}
         <div className="mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
-          <label className="block mb-2 text-gray-300 font-semibold">1. 파티원 명단 입력</label>
+          <div className="flex justify-between items-start gap-4 mb-2">
+            <label className="block text-gray-300 font-semibold">
+              1. 파티원 명단 입력
+              <span className="text-gray-500 text-xs font-normal block mt-1">(이름-서버명 한 줄에 하나씩)</span>
+            </label>
+            <RosterManager currentText={inputText} onSelectRoster={setInputText} />
+          </div>
           <textarea
             className="w-full p-4 bg-gray-900 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500 resize-none"
             rows={3} value={inputText} onChange={(e) => setInputText(e.target.value)}

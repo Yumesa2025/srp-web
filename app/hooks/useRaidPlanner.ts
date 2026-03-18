@@ -4,6 +4,18 @@ import { useState } from "react";
 import { PlayerData, RoleType } from "@/app/types";
 import { ALL_DEFENSIVE_SKILLS } from "@/app/constants/defensiveSkills";
 
+interface CharacterApiResponse {
+  error?: string;
+  name?: string;
+  realm?: string;
+  realmName?: string;
+  health?: number;
+  armor?: number;
+  versatility?: number;
+  activeSpec?: string;
+  talents?: string[];
+}
+
 // 전문화 이름으로 역할을 자동 유추 (한국어 클라이언트 기준)
 export function guessRole(spec?: string): RoleType {
   if (!spec) return "UNASSIGNED";
@@ -63,16 +75,23 @@ export function useRaidPlanner() {
       }
 
       try {
-        const res  = await fetch(`/api/character?realm=${realm}&name=${name}`);
-        const data = await res.json();
+        const params = new URLSearchParams({
+          realm,
+          name,
+        });
+        const res  = await fetch(`/api/character?${params.toString()}`);
+        const data = (await res.json()) as CharacterApiResponse;
 
         if (!res.ok) {
           newPlayers.push({ id, name, realm, role: "UNASSIGNED", error: data.error });
         } else {
+          const resolvedName = typeof data.name === "string" && data.name.trim() ? data.name : name;
+          const resolvedRealm = typeof data.realm === "string" && data.realm.trim() ? data.realm : realm;
           newPlayers.push({
-            id,
-            name:        data.name,
-            realm,
+            id: `${resolvedName}-${resolvedRealm}`.toLowerCase(),
+            name:        resolvedName,
+            realm:       resolvedRealm,
+            realmName:   typeof data.realmName === "string" ? data.realmName : undefined,
             health:      data.health,
             armor:       data.armor,
             versatility: data.versatility,

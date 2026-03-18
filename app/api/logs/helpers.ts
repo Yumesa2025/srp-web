@@ -37,6 +37,25 @@ export interface WclEventNode {
   targetResources?: Array<{ type?: number; amount?: number; max?: number }>;
 }
 
+interface WclGraphQlPayload {
+  errors?: { message?: string }[];
+  data?: {
+    reportData?: {
+      report?: {
+        fights?: WclFightNode[];
+        masterData?: {
+          abilities?: WclAbilityNode[];
+          actors?: WclActorNode[];
+        };
+        events?: {
+          data?: WclEventNode[];
+          nextPageTimestamp?: number;
+        };
+      };
+    };
+  };
+}
+
 export type WclDataType = "Deaths" | "Casts" | "DamageDone" | "Healing";
 export type WclHostilityType = "Enemies" | "Friendlies";
 
@@ -280,7 +299,7 @@ export const detectWipeTailStart = (deathSeconds: number[], fightDurationSec: nu
   return null;
 };
 
-export const fetchWclGraphQL = async (accessToken: string, query: string) => {
+export const fetchWclGraphQL = async (accessToken: string, query: string): Promise<WclGraphQlPayload> => {
   const response = await fetch("https://www.warcraftlogs.com/api/v2/client", {
     method: "POST",
     headers: {
@@ -290,7 +309,7 @@ export const fetchWclGraphQL = async (accessToken: string, query: string) => {
     body: JSON.stringify({ query }),
     cache: "no-store",
   });
-  return response.json();
+  return (await response.json()) as WclGraphQlPayload;
 };
 
 export const fetchPagedEvents = async (params: {

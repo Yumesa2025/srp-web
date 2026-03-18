@@ -16,12 +16,15 @@
 # next.js
 /.next/
 /out/
+/.open-next/
+/.wrangler/
 
 # production
 /build
 
 # misc
 .DS_Store
+.vs/
 *.pem
 
 # debug
@@ -39,3 +42,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+cloudflare-env.d.ts
+.dev.vars

@@ -32,6 +32,14 @@ interface CompareInputLog {
   }[];
 }
 
+interface MinimaxResponse {
+  choices?: {
+    message?: {
+      content?: string;
+    };
+  }[];
+}
+
 const compactLog = (log: CompareInputLog) => ({
   reportId: log.reportId,
   fight: log.fight,
@@ -84,9 +92,12 @@ const buildFallbackAnalysis = (failed: CompareInputLog, successes: CompareInputL
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const failedLog = body?.failedLog as CompareInputLog | undefined;
-    const successLogs = (body?.successLogs || []) as CompareInputLog[];
+    const body = (await request.json()) as {
+      failedLog?: CompareInputLog;
+      successLogs?: CompareInputLog[];
+    };
+    const failedLog = body.failedLog;
+    const successLogs = body.successLogs || [];
 
     if (!failedLog || !Array.isArray(successLogs) || successLogs.length === 0) {
       return NextResponse.json({ error: "failedLog / successLogs 데이터가 필요합니다." }, { status: 400 });
@@ -138,8 +149,8 @@ ${JSON.stringify(successLogs.map(compactLog), null, 2)}
         throw new Error(`Minimax API 에러: ${response.status} - ${errText}`);
     }
 
-    const data = await response.json();
-    const analysis = data.choices[0]?.message?.content || "AI 분석 결과를 생성하지 못했습니다.";
+    const data = (await response.json()) as MinimaxResponse;
+    const analysis = data.choices?.[0]?.message?.content || "AI 분석 결과를 생성하지 못했습니다.";
     return NextResponse.json({ analysis });
 
   } catch (error: unknown) {

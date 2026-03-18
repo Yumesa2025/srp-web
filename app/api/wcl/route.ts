@@ -9,6 +9,21 @@ interface WclFightNode {
   bossPercentage?: number;
 }
 
+interface WclTokenResponse {
+  access_token?: string;
+}
+
+interface WclFightsResponse {
+  errors?: { message?: string }[];
+  data?: {
+    reportData?: {
+      report?: {
+        fights?: WclFightNode[];
+      };
+    };
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const reportId = searchParams.get('reportId');
@@ -33,7 +48,7 @@ export async function GET(request: Request) {
       cache: 'no-store',
     });
 
-    const tokenData = await tokenRes.json();
+    const tokenData = (await tokenRes.json()) as WclTokenResponse;
     const accessToken = tokenData.access_token;
 
     if (!accessToken) {
@@ -69,7 +84,7 @@ export async function GET(request: Request) {
       cache: 'no-store',
     });
 
-    const wclData = await wclRes.json();
+    const wclData = (await wclRes.json()) as WclFightsResponse;
 
     // 에러 처리
     if (wclData.errors) {

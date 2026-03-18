@@ -18,6 +18,7 @@ export interface PlayerData {
   id: string;
   name: string;
   realm: string;
+  realmName?: string;
   health?: number;
   armor?: number;
   versatility?: number;

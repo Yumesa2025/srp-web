@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { resolveKrRealm } from '@/app/lib/krRealmResolver';
 
 type WclMetric = 'dps' | 'hps' | 'tankhps';
 
@@ -8,6 +9,56 @@ interface WclBestPerfDetails {
   heroic: number | null;
   mythic: number | null;
   metric: WclMetric | null;
+}
+
+interface BlizzardStatsResponse {
+  character?: {
+    name?: string;
+  };
+  health?: number;
+  armor?: {
+    effective?: number;
+  };
+  versatility?: number;
+}
+
+interface BlizzardProfileResponse {
+  name?: string;
+  equipped_item_level?: number;
+  character_class?: {
+    name?: string;
+  };
+}
+
+interface BlizzardTalentNode {
+  tooltip?: {
+    spell_tooltip?: {
+      spell?: {
+        name?: string;
+      };
+    };
+  };
+}
+
+interface BlizzardLoadout {
+  is_active?: boolean;
+  selected_class_talents?: BlizzardTalentNode[];
+  selected_spec_talents?: BlizzardTalentNode[];
+}
+
+interface BlizzardSpecializationEntry {
+  specialization?: {
+    id?: number;
+  };
+  loadouts?: BlizzardLoadout[];
+}
+
+interface BlizzardTalentsResponse {
+  active_specialization?: {
+    id?: number;
+    name?: string;
+  };
+  specializations?: BlizzardSpecializationEntry[];
 }
 
 const WCL_DIFFICULTY = {
@@ -90,7 +141,7 @@ async function fetchWclRaidName(accessToken: string, zoneId: number): Promise<st
     });
 
     if (!response.ok) return null;
-    const data = await response.json();
+    const data = (await response.json()) as { data?: { worldData?: { zone?: { name?: string } } } };
     const zoneName = data?.data?.worldData?.zone?.name;
     return typeof zoneName === 'string' ? zoneName : null;
   } catch {
@@ -98,7 +149,7 @@ async function fetchWclRaidName(accessToken: string, zoneId: number): Promise<st
   }
 }
 
-async function fetchWclBestPerfDetails(characterName: string, realm: string): Promise<WclBestPerfDetails | null> {
+async function fetchWclBestPerfDetails(characterName: string, realmSlug: string): Promise<WclBestPerfDetails | null> {
   const clientId = process.env.WCL_CLIENT_ID;
   const clientSecret = process.env.WCL_CLIENT_SECRET;
 
@@ -117,12 +168,12 @@ async function fetchWclBestPerfDetails(characterName: string, realm: string): Pr
     });
 
     if (!tokenResponse.ok) return null;
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token as string | undefined;
+    const tokenData = (await tokenResponse.json()) as { access_token?: string };
+    const accessToken = tokenData.access_token;
     if (!accessToken) return null;
 
     const escapedName = characterName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    const escapedRealm = realm
+    const escapedRealm = realmSlug
       .toLowerCase()
       .trim()
       .replace(/\s+/g, '-')
@@ -159,7 +210,13 @@ async function fetchWclBestPerfDetails(characterName: string, realm: string): Pr
         continue;
       }
 
-      const graphData = await graphResponse.json();
+      const graphData = (await graphResponse.json()) as {
+        data?: {
+          characterData?: {
+            character?: Record<string, unknown>;
+          };
+        };
+      };
       const character = graphData?.data?.characterData?.character;
       if (!character) {
         continue;
@@ -243,15 +300,18 @@ export async function GET(request: Request) {
       cache: 'no-store',
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = (await tokenResponse.json()) as { access_token?: string };
     const accessToken = tokenData.access_token;
 
     if (!accessToken) {
       throw new Error('블리자드 출입증 발급 실패! ID/비번을 확인하세요.');
     }
 
+    const resolvedRealm = await resolveKrRealm(accessToken, realm);
+    const realmSlug = resolvedRealm.slug;
+
     // 2. 캐릭터 스탯(Statistics) 데이터 가져오기
-    const statsUrl = `https://kr.api.blizzard.com/profile/wow/character/${realm}/${encodeURIComponent(name)}/statistics?namespace=profile-kr&locale=ko_KR`;
+    const statsUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name)}/statistics?namespace=profile-kr&locale=ko_KR`;
     const statsResponse = await fetch(statsUrl, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
       cache: 'no-store',
@@ -260,10 +320,10 @@ export async function GET(request: Request) {
     if (!statsResponse.ok) {
       throw new Error('캐릭터를 찾을 수 없거나 서버 오류입니다.');
     }
-    const statsData = await statsResponse.json();
+    const statsData = (await statsResponse.json()) as BlizzardStatsResponse;
 
     // 3. [추가됨] 캐릭터 기본 프로필(아이템 레벨, 직업명) 데이터 가져오기
-    const profileUrl = `https://kr.api.blizzard.com/profile/wow/character/${realm}/${encodeURIComponent(name)}?namespace=profile-kr&locale=ko_KR`;
+    const profileUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name)}?namespace=profile-kr&locale=ko_KR`;
     const profileResponse = await fetch(profileUrl, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
       cache: 'no-store',
@@ -274,17 +334,17 @@ export async function GET(request: Request) {
     let profileName = statsData.character?.name;
 
     if (profileResponse.ok) {
-      const profileData = await profileResponse.json();
+      const profileData = (await profileResponse.json()) as BlizzardProfileResponse;
       itemLevel = profileData.equipped_item_level || 0;
       className = profileData.character_class?.name || "알 수 없음";
       profileName = profileData.name || profileName;
     }
 
-    const bestPerfDetails = await fetchWclBestPerfDetails(profileName || name, realm);
+    const bestPerfDetails = await fetchWclBestPerfDetails(profileName || name, realmSlug);
     const bestPerfAvg = getLegacyBestPerfAvg(bestPerfDetails);
 
     // 4. [추가됨] 캐릭터 특성(Specializations & Talents) 데이터 가져오기
-    const talentsUrl = `https://kr.api.blizzard.com/profile/wow/character/${realm}/${encodeURIComponent(name)}/specializations?namespace=profile-kr&locale=ko_KR`;
+    const talentsUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name)}/specializations?namespace=profile-kr&locale=ko_KR`;
     const talentsResponse = await fetch(talentsUrl, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
       cache: 'no-store',
@@ -294,27 +354,25 @@ export async function GET(request: Request) {
     const talentNames: string[] = [];
 
     if (talentsResponse.ok) {
-      const talentsData = await talentsResponse.json();
+      const talentsData = (await talentsResponse.json()) as BlizzardTalentsResponse;
       
       // 현재 활성화된 전문화 이름 (예: "신성", "무기", "화염")
       activeSpecName = talentsData.active_specialization?.name || "알 수 없음";
 
       // 현재 활성화된 특성 트리(Loadout) 찾기
       const activeSpec = talentsData.specializations?.find(
-        (spec: unknown) => (spec as { specialization: { id: number } }).specialization.id === talentsData.active_specialization?.id
+        (spec) => spec.specialization?.id === talentsData.active_specialization?.id
       );
-      const activeLoadout = (activeSpec as { loadouts?: { is_active: boolean; selected_class_talents?: unknown[]; selected_spec_talents?: unknown[] }[] })?.loadouts?.find((loadout) => loadout.is_active);
+      const activeLoadout = activeSpec?.loadouts?.find((loadout) => loadout.is_active);
 
       // 찍어둔 공용 특성 & 전문화 특성 이름 모두 수집
       if (activeLoadout) {
-        activeLoadout.selected_class_talents?.forEach((t: unknown) => {
-          const talent = t as { tooltip?: { spell_tooltip?: { spell?: { name?: string } } } };
+        activeLoadout.selected_class_talents?.forEach((talent) => {
           if (talent.tooltip?.spell_tooltip?.spell?.name) {
             talentNames.push(talent.tooltip.spell_tooltip.spell.name);
           }
         });
-        activeLoadout.selected_spec_talents?.forEach((t: unknown) => {
-          const talent = t as { tooltip?: { spell_tooltip?: { spell?: { name?: string } } } };
+        activeLoadout.selected_spec_talents?.forEach((talent) => {
           if (talent.tooltip?.spell_tooltip?.spell?.name) {
             talentNames.push(talent.tooltip.spell_tooltip.spell.name);
           }
@@ -334,6 +392,8 @@ export async function GET(request: Request) {
       className,                  // 추가: 직업명(한국어)
       bestPerfAvg,                // 추가: Warcraft Logs Best Perf. Avg
       bestPerfDetails,            // 추가: 난이도별 Best Perf Avg + 레이드명
+      realm: realmSlug,           // 추가: 정규화된 서버 슬러그
+      realmName: resolvedRealm.name, // 추가: 서버 표시명(가능한 경우)
     };
 
     return NextResponse.json(result);

@@ -1,5 +1,36 @@
 import { NextResponse } from 'next/server';
 
+interface WclTokenResponse {
+  access_token?: string;
+}
+
+interface TimelineEventNode {
+  type: string;
+  timestamp: number;
+  abilityGameID: number;
+}
+
+interface TimelineAbilityNode {
+  gameID: number;
+  name: string;
+}
+
+interface WclTimelineResponse {
+  errors?: { message?: string }[];
+  data?: {
+    reportData?: {
+      report?: {
+        masterData?: {
+          abilities?: TimelineAbilityNode[];
+        };
+        events?: {
+          data?: TimelineEventNode[];
+        };
+      };
+    };
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const reportId  = searchParams.get('reportId');
@@ -26,7 +57,7 @@ export async function GET(request: Request) {
       cache: 'no-store',
     });
 
-    const tokenData   = await tokenRes.json();
+    const tokenData = (await tokenRes.json()) as WclTokenResponse;
     const accessToken = tokenData.access_token;
     if (!accessToken) throw new Error('WCL 토큰 발급 실패');
 
@@ -66,15 +97,15 @@ export async function GET(request: Request) {
       cache: 'no-store',
     });
 
-    const wclData = await wclRes.json();
+    const wclData = (await wclRes.json()) as WclTimelineResponse;
     if (wclData.errors) throw new Error(wclData.errors[0].message);
 
     const reportNode = wclData.data?.reportData?.report;
-    const rawEvents: { type: string; timestamp: number; abilityGameID: number }[] =
+    const rawEvents: TimelineEventNode[] =
       reportNode?.events?.data || [];
 
     // 1. 스킬 번호(ID)를 이름으로 바꿔줄 번역 사전 만들기
-    const abilities: { gameID: number; name: string }[] =
+    const abilities: TimelineAbilityNode[] =
       reportNode?.masterData?.abilities || [];
     const abilityMap = new Map<number, string>();
     abilities.forEach((ab) => abilityMap.set(ab.gameID, ab.name));

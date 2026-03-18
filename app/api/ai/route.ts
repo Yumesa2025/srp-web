@@ -1,9 +1,23 @@
 import { NextResponse } from 'next/server';
 
+interface AiRequestBody {
+  timeline?: unknown[];
+  healers?: unknown[];
+  spellDictionary?: Record<string, unknown>;
+}
+
+interface MinimaxResponse {
+  choices?: {
+    message?: {
+      content?: string;
+    };
+  }[];
+}
+
 export async function POST(request: Request) {
   try {
     // 1. 프론트엔드에서 보낸 데이터(보스 이름, 타임라인, 힐러 목록) 받기
-    const body = await request.json();
+    const body = (await request.json()) as AiRequestBody;
     const { timeline, healers, spellDictionary } = body;
 
     if (!timeline || !healers) {
@@ -63,10 +77,13 @@ export async function POST(request: Request) {
         throw new Error(`Minimax API 에러: ${response.status} - ${errText}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as MinimaxResponse;
 
     // 4. AI가 짜준 택틱 결과를 프론트엔드로 전달
-    const aiTactic = data.choices[0].message.content;
+    const aiTactic = data.choices?.[0]?.message?.content;
+    if (!aiTactic) {
+      throw new Error("AI 택틱 생성 결과가 비어 있습니다.");
+    }
     
     return NextResponse.json({ tactic: aiTactic });
 
