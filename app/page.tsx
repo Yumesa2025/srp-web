@@ -206,94 +206,111 @@ export default function Home() {
 
   const fetchRaidData = async () => {
     setIsLoading(true);
-    const lines = inputText.trim().split("\n");
-    const newPlayers: PlayerData[] = [];
-    const existingIds = new Set(players.map((p) => p.id.trim().toLowerCase()));
-    const requestedIds = new Set<string>();
+    try {
+      const lines = inputText.trim().split("\n");
+      const newPlayers: PlayerData[] = [];
+      const existingIds = new Set(players.map((p) => p.id.trim().toLowerCase()));
+      const requestedIds = new Set<string>();
 
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line) continue;
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) continue;
 
-      const [namePart, ...realmParts] = line.split("-");
-      const name = namePart?.trim();
-      const realm = realmParts.join("-").trim();
-      const id = `${name}-${realm}`;
-      const normalizedId = id.toLowerCase();
+        const [namePart, ...realmParts] = line.split("-");
+        const name = namePart?.trim();
+        const realm = realmParts.join("-").trim();
+        const id = `${name}-${realm}`;
+        const normalizedId = id.toLowerCase();
 
-      if (existingIds.has(normalizedId) || requestedIds.has(normalizedId)) {
-        continue;
-      }
-
-      requestedIds.add(normalizedId);
-
-      if (!name || !realm) {
-        newPlayers.push({ id, name: line, realm: "오류", role: "UNASSIGNED", error: "이름-서버명 형식 필요" });
-        continue;
-      }
-
-      try {
-        const params = new URLSearchParams({
-          realm,
-          name,
-        });
-        const res  = await fetch(`/api/character?${params.toString()}`);
-        const data = (await res.json()) as {
-          error?: string;
-          name?: string;
-          realm?: string;
-          realmName?: string;
-          health?: number;
-          armor?: number;
-          versatility?: number;
-          activeSpec?: string;
-          talents?: string[];
-          itemLevel?: number;
-          className?: string;
-          bestPerfAvg?: number | null;
-          bestPerfDetails?: PlayerData["bestPerfDetails"];
-        };
-
-        if (!res.ok) {
-          newPlayers.push({ id, name, realm, role: "UNASSIGNED", error: data.error });
-        } else {
-          const resolvedName = typeof data.name === "string" && data.name.trim() ? data.name : name;
-          const resolvedRealm = typeof data.realm === "string" && data.realm.trim() ? data.realm : realm;
-          const resolvedId = `${resolvedName}-${resolvedRealm}`.toLowerCase();
-          if (existingIds.has(resolvedId) || requestedIds.has(resolvedId)) {
-            continue;
-          }
-          requestedIds.add(resolvedId);
-
-          // 💡 [수정됨] 처음 불러올 때 모든 생존기를 '켜짐(true)' 상태로 저장
-          const myDefensives = data.talents?.filter((t: string) => DEFENSIVE_SKILLS.includes(t)) || [];
-          const defensivesWithState = myDefensives.map((d: string) => ({ name: d, isActive: true }));
-
-          newPlayers.push({
-            id: resolvedId,
-            name: resolvedName,
-            realm: resolvedRealm,
-            realmName: typeof data.realmName === "string" ? data.realmName : undefined,
-            health: data.health, armor: data.armor, versatility: data.versatility,
-            activeSpec: data.activeSpec, talents: data.talents,
-            itemLevel: data.itemLevel,
-            className: data.className,
-            bestPerfAvg: data.bestPerfAvg,
-            bestPerfDetails: data.bestPerfDetails ?? null,
-            defensives: defensivesWithState,
-            role: guessRole(data.activeSpec),
-          });
+        if (existingIds.has(normalizedId) || requestedIds.has(normalizedId)) {
+          continue;
         }
-      } catch {
-        newPlayers.push({ id, name, realm, role: "UNASSIGNED", error: "통신 에러" });
+
+        requestedIds.add(normalizedId);
+
+        if (!name || !realm) {
+          newPlayers.push({ id, name: line, realm: "오류", role: "UNASSIGNED", error: "이름-서버명 형식 필요" });
+          continue;
+        }
+
+        try {
+          const params = new URLSearchParams({
+            realm,
+            name,
+          });
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+
+          let res: Response;
+          let data: {
+            error?: string;
+            name?: string;
+            realm?: string;
+            realmName?: string;
+            health?: number;
+            armor?: number;
+            versatility?: number;
+            activeSpec?: string;
+            talents?: string[];
+            itemLevel?: number;
+            className?: string;
+            bestPerfAvg?: number | null;
+            bestPerfDetails?: PlayerData["bestPerfDetails"];
+          };
+
+          try {
+            res = await fetch(`/api/character?${params.toString()}`, {
+              signal: controller.signal,
+              cache: "no-store",
+            });
+            data = (await res.json()) as typeof data;
+          } finally {
+            clearTimeout(timeout);
+          }
+
+          if (!res.ok) {
+            newPlayers.push({ id, name, realm, role: "UNASSIGNED", error: data.error || "조회 실패" });
+          } else {
+            const resolvedName = typeof data.name === "string" && data.name.trim() ? data.name : name;
+            const resolvedRealm = typeof data.realm === "string" && data.realm.trim() ? data.realm : realm;
+            const resolvedId = `${resolvedName}-${resolvedRealm}`.toLowerCase();
+            if (existingIds.has(resolvedId) || requestedIds.has(resolvedId)) {
+              continue;
+            }
+            requestedIds.add(resolvedId);
+
+            const myDefensives = data.talents?.filter((t: string) => DEFENSIVE_SKILLS.includes(t)) || [];
+            const defensivesWithState = myDefensives.map((d: string) => ({ name: d, isActive: true }));
+
+            newPlayers.push({
+              id: resolvedId,
+              name: resolvedName,
+              realm: resolvedRealm,
+              realmName: typeof data.realmName === "string" ? data.realmName : undefined,
+              health: data.health, armor: data.armor, versatility: data.versatility,
+              activeSpec: data.activeSpec, talents: data.talents,
+              itemLevel: data.itemLevel,
+              className: data.className,
+              bestPerfAvg: data.bestPerfAvg,
+              bestPerfDetails: data.bestPerfDetails ?? null,
+              defensives: defensivesWithState,
+              role: guessRole(data.activeSpec),
+            });
+          }
+        } catch (error) {
+          const message = error instanceof DOMException && error.name === "AbortError"
+            ? "조회 시간 초과"
+            : "통신 에러";
+          newPlayers.push({ id, name, realm, role: "UNASSIGNED", error: message });
+        }
       }
-    }
 
-    if (newPlayers.length > 0) {
-      setPlayers((prev) => [...prev, ...newPlayers]);
+      if (newPlayers.length > 0) {
+        setPlayers((prev) => [...prev, ...newPlayers]);
+      }
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   // 💡 [추가됨] 생존기 클릭 시 ON/OFF 토글 함수

@@ -61,6 +61,21 @@ interface BlizzardTalentsResponse {
   specializations?: BlizzardSpecializationEntry[];
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(fallback), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        resolve(fallback);
+      });
+  });
+}
+
 const WCL_DIFFICULTY = {
   normal: 3,
   heroic: 4,
@@ -340,7 +355,11 @@ export async function GET(request: Request) {
       profileName = profileData.name || profileName;
     }
 
-    const bestPerfDetails = await fetchWclBestPerfDetails(profileName || name, realmSlug);
+    const bestPerfDetails = await withTimeout(
+      fetchWclBestPerfDetails(profileName || name, realmSlug),
+      4000,
+      null
+    );
     const bestPerfAvg = getLegacyBestPerfAvg(bestPerfDetails);
 
     // 4. [추가됨] 캐릭터 특성(Specializations & Talents) 데이터 가져오기
