@@ -1,6 +1,7 @@
 "use client";
 
 import { ALL_DEFENSIVE_SKILLS } from "@/app/constants/defensiveSkills";
+import RosterManager from "./RosterManager";
 
 interface ControlPanelProps {
   inputText: string;
@@ -21,10 +22,13 @@ export default function ControlPanel({
 
       {/* 파티원 명단 입력 */}
       <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
-        <label className="block mb-2 text-gray-300 font-semibold">
-          1. 파티원 명단 입력{" "}
-          <span className="text-gray-500 text-xs font-normal">(이름-서버명 한 줄에 하나씩)</span>
-        </label>
+        <div className="flex justify-between items-start mb-3">
+          <label className="text-gray-300 font-semibold block">
+            1. 파티원 명단 입력{" "}
+            <span className="text-gray-500 text-xs font-normal block mt-1">(이름-서버명 한 줄에 하나씩)</span>
+          </label>
+          <RosterManager currentText={inputText} onSelectRoster={onInputChange} />
+        </div>
         <textarea
           className="w-full p-4 bg-gray-900 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500 resize-none font-mono text-sm"
           rows={4}
