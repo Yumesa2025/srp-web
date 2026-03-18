@@ -9,6 +9,19 @@ import {
 } from "./helpers";
 import { buildLogSummary } from "./buildSummary";
 
+function extractReportCode(raw: string): string {
+  const value = raw.trim();
+  if (!value) return "";
+
+  const urlMatch = value.match(/reports\/([A-Za-z0-9]+)/i);
+  if (urlMatch?.[1]) {
+    return urlMatch[1];
+  }
+
+  const token = value.split(/[/?#\s]/)[0] || "";
+  return token.replace(/[^A-Za-z0-9]/g, "");
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -18,7 +31,7 @@ export async function POST(request: Request) {
       throughputStepSec?: number;
     };
     const rawReportId = typeof body.reportId === "string" ? body.reportId : "";
-    const reportId = rawReportId.replace(/[^A-Za-z0-9]/g, "");
+    const reportId = extractReportCode(rawReportId);
     const fightId = typeof body.fightId === "number" ? Math.floor(body.fightId) : undefined;
     const preferKill = Boolean(body.preferKill);
     const rawThroughputStepSec = Number(body.throughputStepSec);
@@ -75,9 +88,20 @@ export async function POST(request: Request) {
       throw new Error(fightData.errors[0].message || "WCL fight 조회 실패");
     }
 
-    const fights = (fightData?.data?.reportData?.report?.fights || []) as WclFightNode[];
+    const reportNode = fightData?.data?.reportData?.report;
+    if (!reportNode) {
+      return NextResponse.json(
+        { error: `WCL 리포트를 찾지 못했습니다. reportId를 확인해 주세요. (${reportId})` },
+        { status: 404 }
+      );
+    }
+
+    const fights = (reportNode.fights || []) as WclFightNode[];
     if (fights.length === 0) {
-      return NextResponse.json({ error: "해당 리포트에서 전투를 찾지 못했습니다." }, { status: 404 });
+      return NextResponse.json(
+        { error: `리포트는 찾았지만 전투 목록이 비어 있습니다. 비공개 로그이거나 접근 권한 문제일 수 있습니다. (${reportId})` },
+        { status: 404 }
+      );
     }
 
     const selectedFight = pickFight(fights, fightId, preferKill);
