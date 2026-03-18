@@ -210,6 +210,7 @@ export default function Home() {
       const lines = inputText.trim().split("\n");
       const newPlayers: PlayerData[] = [];
       const existingIds = new Set(players.map((p) => p.id.trim().toLowerCase()));
+      const stagedIds = new Set(existingIds);
       const requestedIds = new Set<string>();
 
       for (const rawLine of lines) {
@@ -222,7 +223,7 @@ export default function Home() {
         const id = `${name}-${realm}`;
         const normalizedId = id.toLowerCase();
 
-        if (existingIds.has(normalizedId) || requestedIds.has(normalizedId)) {
+        if (stagedIds.has(normalizedId) || requestedIds.has(normalizedId)) {
           continue;
         }
 
@@ -274,10 +275,11 @@ export default function Home() {
             const resolvedName = typeof data.name === "string" && data.name.trim() ? data.name : name;
             const resolvedRealm = typeof data.realm === "string" && data.realm.trim() ? data.realm : realm;
             const resolvedId = `${resolvedName}-${resolvedRealm}`.toLowerCase();
-            if (existingIds.has(resolvedId) || requestedIds.has(resolvedId)) {
+            if (stagedIds.has(resolvedId)) {
               continue;
             }
             requestedIds.add(resolvedId);
+            stagedIds.add(resolvedId);
 
             const myDefensives = data.talents?.filter((t: string) => DEFENSIVE_SKILLS.includes(t)) || [];
             const defensivesWithState = myDefensives.map((d: string) => ({ name: d, isActive: true }));
