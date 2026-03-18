@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 
 interface AnalysisInputLog {
   reportId: string;
@@ -96,8 +95,6 @@ interface AnalysisInputLog {
   }[];
 }
 
-let openai: OpenAI | null = null;
-
 const compactLog = (log: AnalysisInputLog) => ({
   reportId: log.reportId,
   fight: log.fight,
@@ -166,13 +163,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "failedLog 데이터가 필요합니다." }, { status: 400 });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.MINIMAX_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ analysis: buildFallbackAnalysis(failedLog) });
-    }
-
-    if (!openai) {
-      openai = new OpenAI({ apiKey });
     }
 
     const prompt = `
@@ -196,14 +189,28 @@ ${JSON.stringify(compactLog(failedLog), null, 2)}
 - 비난 대신 실행 가능한 지시문으로 작성한다.
 `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.3,
-      messages: [{ role: "user", content: prompt }],
+    const response = await fetch("https://api.minimax.chat/v1/text/chatcompletion_v2", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "MiniMax-Text-01",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+      })
     });
 
-    const analysis = response.choices[0]?.message?.content || "AI 분석 결과를 생성하지 못했습니다.";
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Minimax API 에러: ${response.status} - ${errText}`);
+    }
+
+    const data = await response.json();
+    const analysis = data.choices[0]?.message?.content || "AI 분석 결과를 생성하지 못했습니다.";
     return NextResponse.json({ analysis });
+
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "로그 AI 분석 중 오류가 발생했습니다.";
     return NextResponse.json({ error: message }, { status: 500 });

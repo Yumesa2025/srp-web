@@ -30,7 +30,7 @@ export default function ControlPanel({
           rows={4}
           value={inputText}
           onChange={(e) => onInputChange(e.target.value)}
-          placeholder={"하우머치하우머치-azshara\n가로쉬-azshara\n스랄-hyjal"}
+          placeholder={"닉네임-azshara\n가로쉬-azshara\n스랄-hyjal"}
         />
         <button
           onClick={onFetch}

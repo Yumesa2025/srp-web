@@ -1,15 +1,6 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-// OpenAI 설정 (서버가 켜질 때 .env.local의 키를 가져옴)
-let openai: OpenAI;
 
 export async function POST(request: Request) {
-  if (!openai) {
-    openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
   try {
     // 1. 프론트엔드에서 보낸 데이터(보스 이름, 타임라인, 힐러 목록) 받기
     const body = await request.json();
@@ -17,6 +8,11 @@ export async function POST(request: Request) {
 
     if (!timeline || !healers) {
       return NextResponse.json({ error: '타임라인이나 힐러 데이터가 없습니다.' }, { status: 400 });
+    }
+
+    const apiKey = process.env.MINIMAX_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'MINIMAX API 설정이 필요합니다.' }, { status: 500 });
     }
 
     // 2. [핵심] AI 공대장에게 내릴 프롬프트(명령어) 작성
@@ -48,15 +44,29 @@ export async function POST(request: Request) {
       5. 허락받지 않은 스킬(목록에 없는 스킬)은 표에 절대 적지 마.
     `;
 
-    // 3. OpenAI에 전송 (최신, 가성비 최고의 똑똑한 모델인 gpt-4o-mini 사용)
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", 
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7, // 약간의 창의성을 허용하지만 너무 소설을 쓰지 않게 제어
+    // 3. Minimax API에 전송
+    const response = await fetch("https://api.minimax.chat/v1/text/chatcompletion_v2", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "MiniMax-Text-01",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+      })
     });
 
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Minimax API 에러: ${response.status} - ${errText}`);
+    }
+
+    const data = await response.json();
+
     // 4. AI가 짜준 택틱 결과를 프론트엔드로 전달
-    const aiTactic = response.choices[0].message.content;
+    const aiTactic = data.choices[0].message.content;
     
     return NextResponse.json({ tactic: aiTactic });
 
