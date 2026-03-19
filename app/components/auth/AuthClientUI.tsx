@@ -3,11 +3,15 @@
 import { useState, useTransition } from 'react';
 import { login, signup, signout } from '@/app/actions/auth';
 import type { User } from '@supabase/supabase-js';
+import { createClient } from '@/app/utils/supabase/client';
+
+const supabase = createClient();
 
 export default function AuthClientUI({ user }: { user: User | null }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [isOAuthPending, setIsOAuthPending] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -43,6 +47,25 @@ export default function AuthClientUI({ user }: { user: User | null }) {
         }
       }
     });
+  };
+
+  const handleGoogleSignIn = async () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    setIsOAuthPending(true);
+
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+      },
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setIsOAuthPending(false);
+    }
   };
 
   if (user) {
@@ -108,6 +131,25 @@ export default function AuthClientUI({ user }: { user: User | null }) {
                 {successMsg}
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isPending || isOAuthPending}
+              className="w-full mb-4 flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-gray-100 disabled:bg-gray-300 text-gray-900 font-bold rounded-xl transition-all shadow-md"
+            >
+              <span className="text-lg leading-none">G</span>
+              <span>{isOAuthPending ? 'Google로 이동 중...' : 'Google로 계속하기'}</span>
+            </button>
+
+            <div className="relative mb-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-700"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase tracking-[0.2em] text-gray-500">
+                <span className="bg-gray-900 px-3">또는</span>
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div>
