@@ -9,12 +9,6 @@ const AiRequestSchema = z.object({
   bossName: z.string().optional(),
 });
 
-interface AiRequestBody {
-  timeline?: unknown[];
-  healers?: unknown[];
-  spellDictionary?: Record<string, unknown>;
-}
-
 interface MinimaxResponse {
   choices?: {
     message?: {
@@ -31,13 +25,13 @@ export async function POST(request: Request) {
 
   try {
     // 1. 프론트엔드에서 보낸 데이터(보스 이름, 타임라인, 힐러 목록) 받기
-    const rawBody = (await request.json()) as AiRequestBody;
+    const rawBody = await request.json();
     const parsed = AiRequestSchema.safeParse(rawBody);
     if (!parsed.success) {
       const message = parsed.error.issues.map((i) => i.message).join(", ");
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    const { timeline, healers, spellDictionary } = parsed.data;
+    const { timeline, healers, spellDictionary, bossName } = parsed.data;
 
     const apiKey = process.env.MINIMAX_API_KEY;
     if (!apiKey) {
@@ -47,6 +41,7 @@ export async function POST(request: Request) {
     // 2. [핵심] AI 공대장에게 내릴 프롬프트(명령어) 작성
     const prompt = `
       너는 월드 오브 워크래프트(WoW) 신화 난이도를 트라이하는 세계 최고의 공격대장이야.
+      ${bossName ? `현재 공략 중인 보스는 **${bossName}**이야.` : ""}
 
       [보스 스킬 사전 (가장 중요함!)]
       ${JSON.stringify(spellDictionary, null, 2)}

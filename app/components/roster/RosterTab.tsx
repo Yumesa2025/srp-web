@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { PlayerData, RoleType } from "@/app/types";
 import RaidZone from "@/app/components/RaidZone";
 import RosterManager from "@/app/components/RosterManager";
@@ -41,15 +42,62 @@ interface RosterTabProps {
   onToggleDefensive: (playerId: string, skillName: string) => void;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  TANK: "🛡️ 탱커",
+  MELEE: "⚔️ 근접 딜러",
+  RANGED: "🏹 원거리 딜러",
+  HEALER: "💚 힐러",
+  UNASSIGNED: "❓ 미분류",
+};
+
+function buildRosterText(players: PlayerData[]): string {
+  const groups: Record<string, PlayerData[]> = {
+    TANK: [], MELEE: [], RANGED: [], HEALER: [], UNASSIGNED: [],
+  };
+  players.forEach((p) => {
+    const key = p.role in groups ? p.role : "UNASSIGNED";
+    groups[key].push(p);
+  });
+
+  const lines: string[] = [`[SRP 공대 구성] 전체 ${players.length}명`, ""];
+  (["TANK", "MELEE", "RANGED", "HEALER", "UNASSIGNED"] as const).forEach((role) => {
+    const group = groups[role];
+    if (group.length === 0) return;
+    lines.push(`${ROLE_LABELS[role]} (${group.length})`);
+    group.forEach((p) => {
+      const spec = p.activeSpec ? ` · ${p.activeSpec}` : "";
+      const ilvl = p.itemLevel ? ` | ${p.itemLevel}` : "";
+      lines.push(`- ${p.name}${spec}${ilvl}`);
+    });
+    lines.push("");
+  });
+
+  return lines.join("\n").trimEnd();
+}
+
 export default function RosterTab({
   inputText, onInputTextChange, players, isLoading, skippedDuplicates,
   onFetchRaidData, onDragOver, onDrop, onDragStart, onRemovePlayer, onToggleDefensive,
 }: RosterTabProps) {
+  const [copyLabel, setCopyLabel] = useState("구성 복사");
   const totalPlayersCount = players.length;
   const assignedPlayersCount = players.filter((p) => p.role !== "UNASSIGNED").length;
   const presentClassNames = new Set(
     players.map((p) => p.className).filter((c): c is string => Boolean(c))
   );
+
+  const handleCopyRoster = async () => {
+    if (players.length === 0) return;
+    const text = buildRosterText(players);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyLabel("복사됨 ✓");
+      setTimeout(() => setCopyLabel("구성 복사"), 2000);
+    } catch {
+      setCopyLabel("실패");
+      setTimeout(() => setCopyLabel("구성 복사"), 2000);
+    }
+  };
 
   return (
     <>
@@ -91,8 +139,15 @@ export default function RosterTab({
         )}
       </div>
 
-      {/* 인원 카운터 */}
-      <div className="mb-3 flex justify-end">
+      {/* 인원 카운터 + 구성 복사 */}
+      <div className="mb-3 flex justify-end items-center gap-2">
+        <button
+          onClick={handleCopyRoster}
+          disabled={players.length === 0}
+          className="text-xs md:text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 text-gray-300 border border-gray-600 rounded-md transition-colors"
+        >
+          📋 {copyLabel}
+        </button>
         <div className="text-xs md:text-sm text-gray-300 bg-gray-800 border border-gray-600 rounded-md px-3 py-1">
           전체 <span className="font-bold text-white">{totalPlayersCount}</span>명 / 분류됨{" "}
           <span className="font-bold text-emerald-400">{assignedPlayersCount}</span>명
