@@ -3,7 +3,9 @@
 import { BOSS_DATABASE, Difficulty, TimelineEvent } from "@/data/bossTimelines";
 import { PlayerData } from "@/app/types";
 import { MRTNode } from "@/app/types/mrt";
+import { SavedTactic } from "@/app/hooks/useTacticStorage";
 import LazyImage from "@/app/components/LazyImage";
+import TacticSavePanel from "@/app/components/tactics/TacticSavePanel";
 import { sharedClasses } from "@/app/styles/sharedClasses";
 
 const getStyles = () => ({
@@ -142,6 +144,13 @@ interface TacticEditorTabProps {
   generateAiTactic: () => void;
   isAiLoading: boolean;
   aiTactic: string;
+  savedTactics: SavedTactic[];
+  isLoggedIn: boolean;
+  isSaving: boolean;
+  isTacticsLoading: boolean;
+  onSaveTactic: (name: string) => Promise<{ error?: string }>;
+  onLoadTactic: (tactic: SavedTactic) => void;
+  onDeleteTactic: (id: string) => void;
 }
 
 export default function TacticEditorTab({
@@ -185,12 +194,34 @@ export default function TacticEditorTab({
   generateAiTactic,
   isAiLoading,
   aiTactic,
+  savedTactics,
+  isLoggedIn,
+  isSaving,
+  isTacticsLoading,
+  onSaveTactic,
+  onLoadTactic,
+  onDeleteTactic,
 }: TacticEditorTabProps) {
   const healersCount = players.filter((p) => p.role === "HEALER").length;
   const s = getStyles();
 
+  const currentBoss = BOSS_DATABASE.find((b) => b.id === selectedBossId) || BOSS_DATABASE[0];
+
   return (
     <>
+      <TacticSavePanel
+        isLoggedIn={isLoggedIn}
+        isSaving={isSaving}
+        isLoading={isTacticsLoading}
+        savedTactics={savedTactics}
+        currentBossId={selectedBossId}
+        currentBossName={currentBoss.name}
+        currentDifficulty={difficulty}
+        onSave={onSaveTactic}
+        onLoad={onLoadTactic}
+        onDelete={onDeleteTactic}
+      />
+
       <div className={`${s.card} border-2 border-green-500/50`}>
         <div className={s.headerContainer}>
           <div className={s.headerLabelContainer}>

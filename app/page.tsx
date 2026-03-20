@@ -13,6 +13,7 @@ import RaidMarketTab from "@/app/components/market/RaidMarketTab";
 import RosterManager from "@/app/components/RosterManager";
 
 import { BOSS_DATABASE, Difficulty } from "../data/bossTimelines";
+import { useTacticStorage } from "@/app/hooks/useTacticStorage";
 
 const getClassColor = (className?: string) => {
   const colors: Record<string, string> = {
@@ -83,6 +84,8 @@ export default function Home() {
   const [showEmptyTicks, setShowEmptyTicks] = useState(true);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingNodeTime, setEditingNodeTime] = useState<string>("");
+
+  const { savedTactics, isLoggedIn, isSaving, isLoading: isTacticsLoading, saveTactic, deleteTactic } = useTacticStorage();
   const [failedLogsInput, setFailedLogsInput] = useState("");
   const [clinicSampleStepSec, setClinicSampleStepSec] = useState<number>(2);
   const [analysisError, setAnalysisError] = useState("");
@@ -864,6 +867,21 @@ export default function Home() {
             generateAiTactic={generateAiTactic}
             isAiLoading={isAiLoading}
             aiTactic={aiTactic}
+            savedTactics={savedTactics}
+            isLoggedIn={isLoggedIn}
+            isSaving={isSaving}
+            isTacticsLoading={isTacticsLoading}
+            onSaveTactic={async (name) => {
+              const boss = BOSS_DATABASE.find((b) => b.id === selectedBossId) || BOSS_DATABASE[0];
+              return saveTactic({ name, bossId: selectedBossId, bossName: boss.name, difficulty, mrtNodes, spellConfig });
+            }}
+            onLoadTactic={(tactic) => {
+              setSelectedBossId(tactic.boss_id);
+              setDifficulty(tactic.difficulty);
+              setMrtNodes(tactic.mrt_nodes);
+              setSpellConfig(tactic.spell_config);
+            }}
+            onDeleteTactic={deleteTactic}
           />
         )}
 
