@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 
 interface AiRequestBody {
   timeline?: unknown[];
@@ -15,6 +16,11 @@ interface MinimaxResponse {
 }
 
 export async function POST(request: Request) {
+  const rl = checkRateLimit(getClientIp(request), "ai", 5, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });
+  }
+
   try {
     // 1. 프론트엔드에서 보낸 데이터(보스 이름, 타임라인, 힐러 목록) 받기
     const body = (await request.json()) as AiRequestBody;

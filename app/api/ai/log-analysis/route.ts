@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 
 interface AnalysisInputLog {
   reportId: string;
@@ -164,6 +165,11 @@ const buildFallbackAnalysis = (log: AnalysisInputLog) => {
 };
 
 export async function POST(request: Request) {
+  const rl = checkRateLimit(getClientIp(request), "ai-log-analysis", 5, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });
+  }
+
   try {
     const body = (await request.json()) as { failedLog?: AnalysisInputLog };
     const failedLog = body.failedLog;

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveKrRealm } from '@/app/lib/krRealmResolver';
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 
 type WclMetric = 'dps' | 'hps' | 'tankhps';
 
@@ -291,6 +292,11 @@ async function fetchWclBestPerfDetails(characterName: string, realmSlug: string)
 }
 
 export async function GET(request: Request) {
+  const rl = checkRateLimit(getClientIp(request), "character", 30, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });
+  }
+
   const { searchParams } = new URL(request.url);
   const realm = searchParams.get('realm');
   const name = searchParams.get('name');
