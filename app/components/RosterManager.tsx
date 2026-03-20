@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition, useRef } from 'react';
+import { useState, useEffect, useTransition, useRef, useCallback } from 'react';
 import { saveRoster, loadRosters, deleteRoster } from '@/app/actions/roster';
 
 interface Roster {
@@ -22,7 +22,8 @@ export default function RosterManager({
   const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [saveName, setSaveName] = useState('');
-  
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,21 +79,23 @@ export default function RosterManager({
     });
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("정말 이 명단을 삭제하시겠습니까?")) return;
-    
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      return;
+    }
+    setConfirmDeleteId(null);
     startTransition(async () => {
       const res = await deleteRoster(id);
       if (res.error) {
         alert(res.error);
       } else {
-        // 리스트 갱신
         setIsOpen(false);
         setTimeout(() => setIsOpen(true), 50);
       }
     });
-  };
+  }, [confirmDeleteId]);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -146,13 +149,18 @@ export default function RosterManager({
                   <div className="truncate pr-3 text-sm text-gray-200 font-medium">
                     {roster.name}
                   </div>
-                  <button 
+                  <button
                     onClick={(e) => handleDelete(roster.id, e)}
+                    onBlur={() => setConfirmDeleteId(null)}
                     disabled={isPending}
-                    className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity p-1 text-xs"
+                    className={`p-1 text-xs font-bold rounded transition-all ${
+                      confirmDeleteId === roster.id
+                        ? "opacity-100 text-white bg-red-600 px-2"
+                        : "opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300"
+                    }`}
                     title="삭제"
                   >
-                    🗑️
+                    {confirmDeleteId === roster.id ? "확인" : "🗑️"}
                   </button>
                 </div>
               ))

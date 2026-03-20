@@ -331,24 +331,21 @@ export async function GET(request: Request) {
     const resolvedRealm = await resolveKrRealm(accessToken, realm);
     const realmSlug = resolvedRealm.slug;
 
-    // 2. 캐릭터 스탯(Statistics) 데이터 가져오기
-    const statsUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name)}/statistics?namespace=profile-kr&locale=ko_KR`;
-    const statsResponse = await fetch(statsUrl, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-      cache: 'no-store',
-    });
+    // 2~4. Blizzard 3개 + WCL 병렬 호출
+    const headers = { 'Authorization': `Bearer ${accessToken}` };
+    const baseUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name)}`;
+
+    const [statsResponse, profileResponse, talentsResponse, bestPerfDetails] = await Promise.all([
+      fetch(`${baseUrl}/statistics?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store' }),
+      fetch(`${baseUrl}?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store' }),
+      fetch(`${baseUrl}/specializations?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store' }),
+      withTimeout(fetchWclBestPerfDetails(name, realmSlug), 4000, null),
+    ]);
 
     if (!statsResponse.ok) {
       throw new Error('캐릭터를 찾을 수 없거나 서버 오류입니다.');
     }
     const statsData = (await statsResponse.json()) as BlizzardStatsResponse;
-
-    // 3. [추가됨] 캐릭터 기본 프로필(아이템 레벨, 직업명) 데이터 가져오기
-    const profileUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name)}?namespace=profile-kr&locale=ko_KR`;
-    const profileResponse = await fetch(profileUrl, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-      cache: 'no-store',
-    });
 
     let itemLevel = 0;
     let className = "알 수 없음";
@@ -361,19 +358,7 @@ export async function GET(request: Request) {
       profileName = profileData.name || profileName;
     }
 
-    const bestPerfDetails = await withTimeout(
-      fetchWclBestPerfDetails(profileName || name, realmSlug),
-      4000,
-      null
-    );
     const bestPerfAvg = getLegacyBestPerfAvg(bestPerfDetails);
-
-    // 4. [추가됨] 캐릭터 특성(Specializations & Talents) 데이터 가져오기
-    const talentsUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name)}/specializations?namespace=profile-kr&locale=ko_KR`;
-    const talentsResponse = await fetch(talentsUrl, {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-      cache: 'no-store',
-    });
 
     let activeSpecName = "알 수 없음";
     const talentNames: string[] = [];

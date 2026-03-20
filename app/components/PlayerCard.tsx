@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { PlayerData } from "@/app/types";
 
 interface PlayerCardProps {
@@ -49,6 +50,8 @@ export default function PlayerCard({
   getClassColor,
   player: p,
 }: PlayerCardProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   return (
     <div
       draggable
@@ -113,14 +116,20 @@ export default function PlayerCard({
         <button
           type="button"
           onMouseDown={(e) => e.stopPropagation()}
+          onBlur={() => setConfirmDelete(false)}
           onClick={(e) => {
             e.stopPropagation();
+            if (!confirmDelete) { setConfirmDelete(true); return; }
             onRemovePlayer(p.id);
           }}
-          className="shrink-0 w-6 h-6 rounded-full border border-red-500/60 text-red-300 hover:text-white hover:bg-red-600/70 transition-colors text-xs font-bold"
-          title="파티원 삭제"
+          className={`shrink-0 rounded-full border text-xs font-bold transition-colors ${
+            confirmDelete
+              ? "px-2 h-6 border-red-500 bg-red-600 text-white"
+              : "w-6 h-6 border-red-500/60 text-red-300 hover:text-white hover:bg-red-600/70"
+          }`}
+          title={confirmDelete ? "한 번 더 클릭하면 삭제" : "파티원 삭제"}
         >
-          ✕
+          {confirmDelete ? "확인" : "✕"}
         </button>
       </div>
 

@@ -14,6 +14,7 @@ import RosterManager from "@/app/components/RosterManager";
 
 import { BOSS_DATABASE, Difficulty } from "../data/bossTimelines";
 import { useTacticStorage } from "@/app/hooks/useTacticStorage";
+import { guessRole } from "@/app/hooks/useRaidPlanner";
 
 const getClassColor = (className?: string) => {
   const colors: Record<string, string> = {
@@ -67,6 +68,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>("ROSTER");
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
+  const [skippedDuplicates, setSkippedDuplicates] = useState<string[]>([]);
 
   // 💡 [추가됨] 보스 및 난이도 선택 상태 관리
   const [selectedBossId, setSelectedBossId] = useState<number>(BOSS_DATABASE[0].id);
@@ -193,28 +195,16 @@ export default function Home() {
 
 
 
-  const guessRole = (spec?: string): RoleType => {
-    if (!spec) return "UNASSIGNED";
-    const tanks   = ["방어", "수호", "혈기", "양조", "복수", "보호"];
-    const healers = ["신성", "복원", "운무", "수양", "보존"];
-    const melee   = ["무기", "분노", "징벌", "암살", "무법", "잠행", "야성", "생존", "풍운", "파멸", "고양"];
-    const ranged  = ["비전", "화염", "냉기", "고통", "악마", "파괴", "조화", "야수", "사격", "암흑", "정기", "황폐"];
-
-    if (tanks.includes(spec))   return "TANK";
-    if (healers.includes(spec)) return "HEALER";
-    if (melee.includes(spec))   return "MELEE";
-    if (ranged.includes(spec))  return "RANGED";
-    return "UNASSIGNED";
-  };
-
   const fetchRaidData = async () => {
     setIsLoading(true);
+    setSkippedDuplicates([]);
     try {
       const lines = inputText.trim().split("\n");
       const newPlayers: PlayerData[] = [];
       const existingIds = new Set(players.map((p) => p.id.trim().toLowerCase()));
       const stagedIds = new Set(existingIds);
       const requestedIds = new Set<string>();
+      const skipped: string[] = [];
 
       for (const rawLine of lines) {
         const line = rawLine.trim();
@@ -227,6 +217,7 @@ export default function Home() {
         const normalizedId = id.toLowerCase();
 
         if (stagedIds.has(normalizedId) || requestedIds.has(normalizedId)) {
+          skipped.push(name || line);
           continue;
         }
 
@@ -312,6 +303,10 @@ export default function Home() {
 
       if (newPlayers.length > 0) {
         setPlayers((prev) => [...prev, ...newPlayers]);
+      }
+      if (skipped.length > 0) {
+        setSkippedDuplicates(skipped);
+        setTimeout(() => setSkippedDuplicates([]), 5000);
       }
     } finally {
       setIsLoading(false);
@@ -719,6 +714,11 @@ export default function Home() {
           >
             {isLoading ? "데이터 로딩 중..." : "캐릭터 가져오기 및 자동 배치"}
           </button>
+          {skippedDuplicates.length > 0 && (
+            <div className="mt-2 px-4 py-2 bg-yellow-900/40 border border-yellow-700 rounded-md text-yellow-300 text-sm">
+              이미 추가된 캐릭터 스킵: {skippedDuplicates.join(", ")}
+            </div>
+          )}
         </div>
 
         {/* 미분류 대기소 */}
