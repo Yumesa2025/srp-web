@@ -76,13 +76,14 @@ export function useClinicState() {
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [clinicReports, setClinicReports] = useState<ClinicReportItem[]>([]);
 
-  const analyzeLogs = async () => {
+  const analyzeLogs = async (onStart?: (logCount: number) => void) => {
     setIsAnalysisLoading(true);
     setAnalysisError("");
     setClinicReports([]);
 
     try {
       const targets = parseClinicTargets(failedLogsInput, clinicSampleStepSec);
+      onStart?.(targets.length);
       if (targets.length === 0) {
         throw new Error("실패 로그를 1개 이상 입력해 주세요. (reportId 또는 reportId:fightId)");
       }

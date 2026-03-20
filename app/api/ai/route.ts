@@ -1,5 +1,13 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
+
+const AiRequestSchema = z.object({
+  timeline: z.array(z.unknown()).min(1, "타임라인이 비어 있습니다."),
+  healers: z.array(z.unknown()).min(1, "힐러 데이터가 없습니다."),
+  spellDictionary: z.record(z.string(), z.unknown()).optional(),
+  bossName: z.string().optional(),
+});
 
 interface AiRequestBody {
   timeline?: unknown[];
@@ -23,12 +31,13 @@ export async function POST(request: Request) {
 
   try {
     // 1. 프론트엔드에서 보낸 데이터(보스 이름, 타임라인, 힐러 목록) 받기
-    const body = (await request.json()) as AiRequestBody;
-    const { timeline, healers, spellDictionary } = body;
-
-    if (!timeline || !healers) {
-      return NextResponse.json({ error: '타임라인이나 힐러 데이터가 없습니다.' }, { status: 400 });
+    const rawBody = (await request.json()) as AiRequestBody;
+    const parsed = AiRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      const message = parsed.error.issues.map((i) => i.message).join(", ");
+      return NextResponse.json({ error: message }, { status: 400 });
     }
+    const { timeline, healers, spellDictionary } = parsed.data;
 
     const apiKey = process.env.MINIMAX_API_KEY;
     if (!apiKey) {

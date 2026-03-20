@@ -16,7 +16,7 @@ import { BOSS_DATABASE, Difficulty } from "../data/bossTimelines";
 import { useTacticStorage } from "@/app/hooks/useTacticStorage";
 import { guessRole } from "@/app/hooks/useRaidPlanner";
 import { useClinicState } from "@/app/hooks/useClinicState";
-
+import { useAnalytics } from "@/app/hooks/useAnalytics";
 
 export default function Home() {
   const [inputText, setInputText] = useState("");
@@ -50,6 +50,7 @@ export default function Home() {
     analysisError, isAnalysisLoading, clinicReports,
     analyzeLogs,
   } = useClinicState();
+  const analytics = useAnalytics();
 
   // 현재 선택된 보스 찾기
   const currentBoss = BOSS_DATABASE.find(b => b.id === selectedBossId) || BOSS_DATABASE[0];
@@ -260,6 +261,7 @@ export default function Home() {
 
       if (newPlayers.length > 0) {
         setPlayers((prev) => [...prev, ...newPlayers]);
+        analytics.trackCharacterFetch(newPlayers.length);
       }
       if (skipped.length > 0) {
         setSkippedDuplicates(skipped);
@@ -291,6 +293,7 @@ export default function Home() {
     setAiTactic("");
 
     const healers = players.filter((p) => p.role === "HEALER");
+    analytics.trackAiTacticGenerate(currentBoss.name, healers.length);
     
     if (healers.length === 0) {
       setAiTactic("⚠️ 에러: 하단 프레임에 '치유 전담 (Healer)'으로 분류된 파티원이 최소 1명 이상 있어야 합니다!");
@@ -476,6 +479,7 @@ export default function Home() {
 
     try {
       await navigator.clipboard.writeText(finalNote);
+      analytics.trackMrtCopy(mrtNodes.length);
       alert("MRT 노드가 클립보드에 복사되었습니다!\n인게임 MRT 'Note' 탭에 붙여넣으세요.");
     } catch {
       alert("클립보드 복사에 실패했습니다. 브라우저 권한을 확인해 주세요.");
@@ -524,7 +528,7 @@ export default function Home() {
       <div className="max-w-[1400px] mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-yellow-400">Smart Raid Planner (SRP)</h1>
 
-        <MainTabs activeTab={activeTab} onChange={setActiveTab} />
+        <MainTabs activeTab={activeTab} onChange={(tab) => { setActiveTab(tab); analytics.trackTabChange(tab); }} />
 
         {activeTab === "ROSTER" && (
           <ErrorBoundary>
@@ -613,7 +617,7 @@ export default function Home() {
             onFailedLogsInputChange={setFailedLogsInput}
             clinicSampleStepSec={clinicSampleStepSec}
             onClinicSampleStepSecChange={setClinicSampleStepSec}
-            onAnalyze={analyzeLogs}
+            onAnalyze={() => analyzeLogs((count) => analytics.trackClinicAnalyze(count))}
             isAnalysisLoading={isAnalysisLoading}
             analysisError={analysisError}
             clinicReports={clinicReports}

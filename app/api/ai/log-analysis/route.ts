@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
+
+const LogAnalysisRequestSchema = z.object({
+  failedLog: z.record(z.string(), z.unknown()),
+});
 
 interface AnalysisInputLog {
   reportId: string;
@@ -171,11 +176,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { failedLog?: AnalysisInputLog };
-    const failedLog = body.failedLog;
-    if (!failedLog) {
-      return NextResponse.json({ error: "failedLog 데이터가 필요합니다." }, { status: 400 });
+    const rawBody = await request.json();
+    const parsed = LogAnalysisRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      const message = parsed.error.issues.map((i) => i.message).join(", ");
+      return NextResponse.json({ error: message }, { status: 400 });
     }
+    const failedLog = parsed.data.failedLog as unknown as AnalysisInputLog;
 
     const apiKey = process.env.MINIMAX_API_KEY;
     if (!apiKey) {

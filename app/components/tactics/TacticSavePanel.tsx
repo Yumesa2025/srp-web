@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SavedTactic } from "@/app/hooks/useTacticStorage";
 import { Difficulty } from "@/data/bossTimelines";
+import { useAnalytics } from "@/app/hooks/useAnalytics";
 
 interface TacticSavePanelProps {
   isLoggedIn: boolean;
@@ -33,6 +34,7 @@ export default function TacticSavePanel({
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const { trackTacticSave, trackTacticLoad } = useAnalytics();
 
   const filteredTactics = savedTactics.filter(
     (t) => t.boss_id === currentBossId && t.difficulty === currentDifficulty
@@ -45,7 +47,10 @@ export default function TacticSavePanel({
     setSuccessMsg("");
     const { error } = await onSave(name);
     if (error) { setErrorMsg(error); }
-    else { setSuccessMsg(`"${name}" 저장 완료!`); setTacticName(""); setTimeout(() => setSuccessMsg(""), 3000); }
+    else {
+      trackTacticSave(currentBossName, currentDifficulty);
+      setSuccessMsg(`"${name}" 저장 완료!`); setTacticName(""); setTimeout(() => setSuccessMsg(""), 3000);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -108,7 +113,7 @@ export default function TacticSavePanel({
               </div>
               <div className="flex gap-2 ml-3 shrink-0">
                 <button
-                  onClick={() => onLoad(t)}
+                  onClick={() => { onLoad(t); trackTacticLoad(currentBossName, currentDifficulty); }}
                   className="px-3 py-1 bg-blue-700 hover:bg-blue-600 text-white text-xs font-bold rounded transition-colors"
                 >
                   불러오기

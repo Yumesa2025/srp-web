@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
+
+const LogsRequestSchema = z.object({
+  reportId: z.string().min(1, "reportId가 필요합니다."),
+  fightId: z.number().int().positive().optional(),
+  preferKill: z.boolean().optional(),
+  throughputStepSec: z.number().optional(),
+});
 import {
   fetchPagedEvents,
   fetchWclGraphQL,
@@ -30,17 +38,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as {
-      reportId?: string;
-      fightId?: number;
-      preferKill?: boolean;
-      throughputStepSec?: number;
-    };
-    const rawReportId = typeof body.reportId === "string" ? body.reportId : "";
-    const reportId = extractReportCode(rawReportId);
-    const fightId = typeof body.fightId === "number" ? Math.floor(body.fightId) : undefined;
-    const preferKill = Boolean(body.preferKill);
-    const rawThroughputStepSec = Number(body.throughputStepSec);
+    const rawBody = await request.json();
+    const parsed = LogsRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      const message = parsed.error.issues.map((i) => i.message).join(", ");
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    const reportId = extractReportCode(parsed.data.reportId);
+    const fightId = parsed.data.fightId;
+    const preferKill = Boolean(parsed.data.preferKill);
+    const rawThroughputStepSec = Number(parsed.data.throughputStepSec);
     const throughputStepSec =
       Number.isFinite(rawThroughputStepSec) && rawThroughputStepSec >= 1
         ? Math.min(30, Math.floor(rawThroughputStepSec))
