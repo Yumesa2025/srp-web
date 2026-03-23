@@ -109,7 +109,7 @@ export default function RosterManager({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-80 bg-gray-900 border border-gray-700 shadow-2xl rounded-xl z-50 p-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-gray-900 border border-gray-700 shadow-2xl rounded-xl z-50 p-4 animate-in fade-in zoom-in-95 duration-200">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-bold text-gray-200 text-sm">클라우드 명단 관리</h3>
             <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-white text-xs p-1">✕</button>
