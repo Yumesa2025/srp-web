@@ -22,3 +22,14 @@ export const DEFENSIVE_SKILLS: string[] = [
 
 // 필터링에 사용할 Set (O(1) 조회)
 export const ALL_DEFENSIVE_SKILLS = new Set(DEFENSIVE_SKILLS);
+
+// MRT 쿨다운 기본값 (초 단위) — 명시되지 않은 스킬은 FALLBACK 적용
+export const MRT_DEFAULT_COOLDOWNS: Readonly<Record<string, number>> = {
+  "고통 억제": 120,
+  "수호 영혼": 120,
+  "희생의 축복": 120,
+  "무쇠껍질": 120,
+  "미풍": 120,
+  "대마법 지대": 120,
+};
+export const MRT_FALLBACK_COOLDOWN = 180;

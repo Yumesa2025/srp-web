@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { DEFENSIVE_SKILLS } from "@/app/constants/defensiveSkills";
+import { DEFENSIVE_SKILLS, MRT_DEFAULT_COOLDOWNS, MRT_FALLBACK_COOLDOWN } from "@/app/constants/defensiveSkills";
+
+const CHAR_FETCH_TIMEOUT_MS = 15_000;
+const SPELL_BATCH_SIZE = 35;
+const DUPLICATE_NOTICE_DURATION_MS = 5_000;
 import { MainTab, PlayerData, RoleType } from "@/app/types";
 import { MRTNode } from "@/app/types/mrt";
 
@@ -26,11 +30,9 @@ export default function Home() {
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
   const [skippedDuplicates, setSkippedDuplicates] = useState<string[]>([]);
 
-  // 💡 [추가됨] 보스 및 난이도 선택 상태 관리
   const [selectedBossId, setSelectedBossId] = useState<number>(BOSS_DATABASE[0].id);
   const [difficulty, setDifficulty] = useState<Difficulty>("Mythic");
 
-  // 💡 [추가됨] AI 택틱 상태 관리
   const [aiTactic, setAiTactic] = useState<string>("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [mrtNodes, setMrtNodes] = useState<MRTNode[]>([]);
@@ -57,10 +59,7 @@ export default function Home() {
   // 현재 선택된 보스의 선택된 난이도 타임라인 가져오기
   const currentTimeline = currentBoss.timelines[difficulty];
 
-  // 💡 [추가됨] 보스의 고유 스킬 목록을 추출하고 설정하는 상태
   const [spellConfig, setSpellConfig] = useState<Record<number, { type: string; danger: string; memo: string }>>({});
-
-  // 💡 [추가됨] 와우헤드에서 가져온 진짜 스킬 이름/아이콘/설명을 저장할 창고
   const [spellDetails, setSpellDetails] = useState<Record<number, { name: string, iconUrl: string, description?: string }>>({});
   const spellFetchRequestedRef = useRef<Set<number>>(new Set());
 
@@ -83,10 +82,9 @@ export default function Home() {
     missingSpellIds.forEach((id) => spellFetchRequestedRef.current.add(id));
 
     let canceled = false;
-    const CHUNK_SIZE = 35;
     const chunks: number[][] = [];
-    for (let i = 0; i < missingSpellIds.length; i += CHUNK_SIZE) {
-      chunks.push(missingSpellIds.slice(i, i + CHUNK_SIZE));
+    for (let i = 0; i < missingSpellIds.length; i += SPELL_BATCH_SIZE) {
+      chunks.push(missingSpellIds.slice(i, i + SPELL_BATCH_SIZE));
     }
 
   const fetchSpellDetailsBatch = async () => {
@@ -206,7 +204,7 @@ export default function Home() {
       // 2단계: 모든 캐릭터 API 호출을 병렬로 실행
       const fetchOne = async ({ name, realm, inputId }: FetchEntry): Promise<PlayerData> => {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
+        const timeout = setTimeout(() => controller.abort(), CHAR_FETCH_TIMEOUT_MS);
         try {
           const params = new URLSearchParams({ realm, name });
           const res = await fetch(`/api/character?${params.toString()}`, {
@@ -272,14 +270,13 @@ export default function Home() {
       }
       if (skipped.length > 0) {
         setSkippedDuplicates(skipped);
-        setTimeout(() => setSkippedDuplicates([]), 5000);
+        setTimeout(() => setSkippedDuplicates([]), DUPLICATE_NOTICE_DURATION_MS);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 💡 [추가됨] 생존기 클릭 시 ON/OFF 토글 함수
   const toggleDefensive = (playerId: string, skillName: string) => {
     setPlayers(prev => prev.map(p => {
       if (p.id === playerId && p.defensives) {
@@ -294,7 +291,6 @@ export default function Home() {
     }));
   };
 
-  // 💡 [추가됨] AI 백엔드 호출 함수
   const generateAiTactic = async () => {
     setIsAiLoading(true);
     setAiTactic("");
@@ -309,7 +305,6 @@ export default function Home() {
     }
 
     try {
-      // 💡 [수정됨] 토글이 켜진(isActive: true) 생존기만 걸러서 AI에게 전송!
       const compactHealers = healers.map(h => ({
         name: h.name,
         spec: h.activeSpec,
@@ -323,7 +318,6 @@ export default function Home() {
           bossName: currentBoss.name,
           timeline: currentTimeline,
           healers: compactHealers,
-          // 💡 [추가됨] 내가 UI에서 설정한 스킬 사전을 AI에게 같이 보냄!
           spellDictionary: uniqueSpells.map(spell => ({
             id: spell.spellId,
             name: spell.spellName,
@@ -349,10 +343,7 @@ export default function Home() {
     setIsAiLoading(false);
   };
 
-  const getDefaultCooldown = (spell: string) => {
-    if (["고통 억제", "수호 영혼", "희생의 축복", "무쇠껍질", "미풍", "대마법 지대"].includes(spell)) return 120;
-    return 180;
-  };
+  const getDefaultCooldown = (spell: string) => MRT_DEFAULT_COOLDOWNS[spell] ?? MRT_FALLBACK_COOLDOWN;
 
   const addMrtNode = () => {
     if (!newNodeTime || !newNodePlayerId || !newNodeSpell) return;
