@@ -31,6 +31,7 @@ export function useTacticStorage() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsLoggedIn(!!session?.user);
+      if (!session?.user) setSavedTactics([]);
     });
 
     return () => listener.subscription.unsubscribe();
@@ -50,9 +51,24 @@ export function useTacticStorage() {
   }, [supabase]);
 
   useEffect(() => {
-    if (isLoggedIn) fetchTactics();
-    else setSavedTactics([]);
-  }, [isLoggedIn, fetchTactics]);
+    if (!isLoggedIn) return;
+
+    let canceled = false;
+
+    async function load() {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("tactics")
+        .select("*")
+        .order("updated_at", { ascending: false });
+      if (canceled) return;
+      if (!error && data) setSavedTactics(data as SavedTactic[]);
+      setIsLoading(false);
+    }
+
+    load();
+    return () => { canceled = true; };
+  }, [isLoggedIn, supabase]);
 
   const saveTactic = useCallback(async (params: {
     name: string;

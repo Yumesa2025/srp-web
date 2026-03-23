@@ -14,7 +14,7 @@ import RosterTab from "@/app/components/roster/RosterTab";
 
 import { BOSS_DATABASE, Difficulty } from "../data/bossTimelines";
 import { useTacticStorage } from "@/app/hooks/useTacticStorage";
-import { guessRole } from "@/app/hooks/useRaidPlanner";
+import { guessRole } from "@/app/lib/raidUtils";
 import { useClinicState } from "@/app/hooks/useClinicState";
 import { useAnalytics } from "@/app/hooks/useAnalytics";
 
@@ -516,12 +516,6 @@ export default function Home() {
       setDraggedPlayerId(null);
     }
   };
-
-  const totalPlayersCount = players.length;
-  const assignedPlayersCount = players.filter((p) => p.role !== "UNASSIGNED").length;
-  const presentClassNames = new Set(
-    players.map((p) => p.className).filter((className): className is string => Boolean(className))
-  );
 
   return (
     <div className="min-h-screen p-8 bg-gray-900 text-white font-sans">
