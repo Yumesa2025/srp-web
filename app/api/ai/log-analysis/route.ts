@@ -2,8 +2,42 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 
+const FightSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string(),
+  kill: z.boolean(),
+  durationSec: z.number().nonnegative(),
+  bossPercentage: z.number().nullable().optional(),
+});
+
+const TopItemSchema = z.object({ ability: z.string(), count: z.number().int().nonnegative() });
+const PlayerDeathSchema = z.object({ name: z.string(), count: z.number().int().nonnegative() });
+
 const LogAnalysisRequestSchema = z.object({
-  failedLog: z.record(z.string(), z.unknown()),
+  failedLog: z.object({
+    reportId: z.string().min(1),
+    fight: FightSchema,
+    totalDeaths: z.number().int().nonnegative(),
+    meaningfulDeathsCount: z.number().int().nonnegative(),
+    excludedTailDeaths: z.number().int().nonnegative(),
+    deathStartSec: z.number().nullable(),
+    wipeTail: z.object({
+      detected: z.boolean(),
+      startSec: z.number().nullable(),
+      windowSec: z.number(),
+      clusterDeaths: z.number().int().nonnegative(),
+      tailDeaths: z.number().int().nonnegative(),
+    }),
+    topCauses: z.array(TopItemSchema),
+    playerDeaths: z.array(PlayerDeathSchema),
+    defensiveMissingCount: z.number().int().nonnegative(),
+    perPlayer: z.array(z.record(z.string(), z.unknown())),
+    consumables: z.unknown().optional(),
+    throughputTimeline: z.array(z.unknown()).optional(),
+    firstMeaningfulDeaths: z.array(z.unknown()),
+    bossCoverage: z.array(z.unknown()),
+    deaths: z.array(z.unknown()),
+  }),
 });
 
 interface AnalysisInputLog {
