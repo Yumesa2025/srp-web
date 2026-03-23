@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/app/utils/supabase/client";
 import { MRTNode } from "@/app/types/mrt";
 import { Difficulty } from "@/data/bossTimelines";
@@ -18,7 +18,7 @@ export interface SavedTactic {
 }
 
 export function useTacticStorage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [savedTactics, setSavedTactics] = useState<SavedTactic[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -34,7 +34,7 @@ export function useTacticStorage() {
     });
 
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   const fetchTactics = useCallback(async () => {
     setIsLoading(true);
@@ -47,14 +47,14 @@ export function useTacticStorage() {
       setSavedTactics(data as SavedTactic[]);
     }
     setIsLoading(false);
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     if (isLoggedIn) fetchTactics();
     else setSavedTactics([]);
   }, [isLoggedIn, fetchTactics]);
 
-  const saveTactic = async (params: {
+  const saveTactic = useCallback(async (params: {
     name: string;
     bossId: number;
     bossName: string;
@@ -87,12 +87,12 @@ export function useTacticStorage() {
     if (!error) await fetchTactics();
     setIsSaving(false);
     return { error: error?.message };
-  };
+  }, [supabase, fetchTactics]);
 
-  const deleteTactic = async (id: string) => {
+  const deleteTactic = useCallback(async (id: string) => {
     await supabase.from("tactics").delete().eq("id", id);
     setSavedTactics((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, [supabase]);
 
   return { savedTactics, isLoggedIn, isSaving, isLoading, saveTactic, deleteTactic, fetchTactics };
 }
