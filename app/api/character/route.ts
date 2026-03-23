@@ -292,7 +292,7 @@ export async function GET(request: Request) {
 
     // 2~4. Blizzard 3개 + WCL 병렬 호출
     const headers = { 'Authorization': `Bearer ${accessToken}` };
-    const baseUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name)}`;
+    const baseUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name.toLowerCase())}`;
 
     const [statsResponse, profileResponse, talentsResponse, bestPerfDetails] = await Promise.all([
       fetch(`${baseUrl}/statistics?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store' }),
