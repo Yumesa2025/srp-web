@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/app/utils/supabase/client";
 import { loadRosters, deleteRoster } from "@/app/actions/roster";
+import DiscordWebhookSettings from "@/app/components/discord/DiscordWebhookSettings";
 
-type ProfileTab = "rosters" | "market";
+type ProfileTab = "rosters" | "market" | "settings";
 
 interface Roster {
   id: string;
@@ -94,9 +95,10 @@ export default function ProfileModal({ user, onClose }: Props) {
     setConfirmRosterId(null);
   };
 
-  const TABS: { key: ProfileTab; label: string; count: number }[] = [
-    { key: "rosters", label: "파티원 명단", count: rosters.length },
-    { key: "market",  label: "공대 거래",   count: sessions.length },
+  const TABS: { key: ProfileTab; label: string; count?: number }[] = [
+    { key: "rosters",  label: "파티원 명단", count: rosters.length },
+    { key: "market",   label: "공대 거래",   count: sessions.length },
+    { key: "settings", label: "⚙️ 설정" },
   ];
 
   return (
@@ -165,7 +167,7 @@ export default function ProfileModal({ user, onClose }: Props) {
               }`}
             >
               {label}
-              {!isLoading && (
+              {!isLoading && count !== undefined && (
                 <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
                   tab === key ? "bg-cyan-600/30 text-cyan-300" : "bg-gray-700 text-gray-500"
                 }`}>
@@ -306,6 +308,12 @@ export default function ProfileModal({ user, onClose }: Props) {
                       </div>
                     );
                   })}
+                </div>
+              )}
+              {/* 설정 탭 */}
+              {tab === "settings" && (
+                <div>
+                  <DiscordWebhookSettings />
                 </div>
               )}
             </>

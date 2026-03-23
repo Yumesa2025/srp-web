@@ -5,6 +5,7 @@ import LazyImage from "@/app/components/LazyImage";
 import { useMarketStorage } from "@/app/hooks/useMarketStorage";
 import RaidSavePanel from "./RaidSavePanel";
 import RaidHistorySection from "./RaidHistorySection";
+import DiscordSendButton from "@/app/components/discord/DiscordSendButton";
 
 const FALLBACK_ICON = "https://wow.zamimg.com/images/wow/icons/large/inv_misc_questionmark.jpg";
 
@@ -207,6 +208,30 @@ export default function RaidMarketTab() {
           >
             정산 요약 복사 📋
           </button>
+          {ledgerItems.length > 0 && (
+            <DiscordSendButton
+              label="Discord 전송"
+              onSend={async () => {
+                const res = await fetch('/api/discord', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    type: 'market',
+                    label: `${new Date().toLocaleDateString('ko-KR')} 정산`,
+                    raidSize: payout.safeSize,
+                    totalGold: payout.totalGold,
+                    raidExpense: payout.expenseAmt,
+                    perPerson: payout.perPerson,
+                    items: ledgerItems.map((i) => ({ itemName: i.itemName, winner: i.winner, gold: i.gold })),
+                  }),
+                });
+                if (!res.ok) {
+                  const data = await res.json() as { error?: string };
+                  throw new Error(data.error ?? 'Discord 전송 실패');
+                }
+              }}
+            />
+          )}
           <button
             onClick={() => { setLedgerInput(""); setLedgerItems([]); setParseIssues([]); }}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold rounded-lg transition-colors text-sm"

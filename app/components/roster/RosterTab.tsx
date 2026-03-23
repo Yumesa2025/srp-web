@@ -5,6 +5,7 @@ import { PlayerData, RoleType } from "@/app/types";
 import RaidZone from "@/app/components/RaidZone";
 import RosterManager from "@/app/components/RosterManager";
 import PlayerCardSkeleton from "@/app/components/PlayerCardSkeleton";
+import DiscordSendButton from "@/app/components/discord/DiscordSendButton";
 
 const WOW_CLASSES = [
   "전사", "성기사", "사냥꾼", "도적", "사제", "죽음의 기사",
@@ -141,6 +142,30 @@ export default function RosterTab({
 
       {/* 인원 카운터 + 구성 복사 */}
       <div className="mb-3 flex justify-end items-center gap-2">
+        {players.length > 0 && (
+          <DiscordSendButton
+            label="Discord 전송"
+            onSend={async () => {
+              const res = await fetch('/api/discord', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'roster',
+                  players: players.map((p) => ({
+                    name: p.name,
+                    activeSpec: p.activeSpec,
+                    itemLevel: p.itemLevel,
+                    role: p.role,
+                  })),
+                }),
+              });
+              if (!res.ok) {
+                const data = await res.json() as { error?: string };
+                throw new Error(data.error ?? 'Discord 전송 실패');
+              }
+            }}
+          />
+        )}
         <button
           onClick={handleCopyRoster}
           disabled={players.length === 0}
