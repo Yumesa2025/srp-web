@@ -157,106 +157,113 @@ export default function Home() {
     setIsLoading(true);
     setSkippedDuplicates([]);
     try {
-      const lines = inputText.trim().split("\n");
-      const newPlayers: PlayerData[] = [];
+      const lines = inputText.trim().split("\n").map((l) => l.trim()).filter(Boolean);
       const existingIds = new Set(players.map((p) => p.id.trim().toLowerCase()));
-      const stagedIds = new Set(existingIds);
-      const requestedIds = new Set<string>();
       const skipped: string[] = [];
 
-      for (const rawLine of lines) {
-        const line = rawLine.trim();
-        if (!line) continue;
+      // 1단계: 파싱 — 형식 오류와 fetch 대상을 분리
+      type FetchEntry = { name: string; realm: string; inputId: string };
+      type CharacterApiData = {
+        error?: string;
+        name?: string;
+        realm?: string;
+        realmName?: string;
+        health?: number;
+        armor?: number;
+        versatility?: number;
+        activeSpec?: string;
+        talents?: string[];
+        itemLevel?: number;
+        className?: string;
+        bestPerfAvg?: number | null;
+        bestPerfDetails?: PlayerData["bestPerfDetails"];
+      };
 
+      const fetchEntries: FetchEntry[] = [];
+      const immediateErrors: PlayerData[] = [];
+      const seenInBatch = new Set<string>();
+
+      for (const line of lines) {
         const [namePart, ...realmParts] = line.split("-");
         const name = namePart?.trim();
         const realm = realmParts.join("-").trim();
-        const id = `${name}-${realm}`;
-        const normalizedId = id.toLowerCase();
+        const inputId = `${name}-${realm}`.toLowerCase();
 
-        if (stagedIds.has(normalizedId) || requestedIds.has(normalizedId)) {
+        if (existingIds.has(inputId) || seenInBatch.has(inputId)) {
           skipped.push(name || line);
           continue;
         }
-
-        requestedIds.add(normalizedId);
+        seenInBatch.add(inputId);
 
         if (!name || !realm) {
-          newPlayers.push({ id, name: line, realm: "오류", role: "UNASSIGNED", error: "이름-서버명 형식 필요" });
+          immediateErrors.push({ id: `${name}-${realm}`, name: line, realm: "오류", role: "UNASSIGNED", error: "이름-서버명 형식 필요" });
           continue;
         }
 
+        fetchEntries.push({ name, realm, inputId });
+      }
+
+      // 2단계: 모든 캐릭터 API 호출을 병렬로 실행
+      const fetchOne = async ({ name, realm, inputId }: FetchEntry): Promise<PlayerData> => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
         try {
-          const params = new URLSearchParams({
-            realm,
-            name,
+          const params = new URLSearchParams({ realm, name });
+          const res = await fetch(`/api/character?${params.toString()}`, {
+            signal: controller.signal,
+            cache: "no-store",
           });
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 15000);
-
-          let res: Response;
-          let data: {
-            error?: string;
-            name?: string;
-            realm?: string;
-            realmName?: string;
-            health?: number;
-            armor?: number;
-            versatility?: number;
-            activeSpec?: string;
-            talents?: string[];
-            itemLevel?: number;
-            className?: string;
-            bestPerfAvg?: number | null;
-            bestPerfDetails?: PlayerData["bestPerfDetails"];
-          };
-
-          try {
-            res = await fetch(`/api/character?${params.toString()}`, {
-              signal: controller.signal,
-              cache: "no-store",
-            });
-            data = (await res.json()) as typeof data;
-          } finally {
-            clearTimeout(timeout);
-          }
+          const data = (await res.json()) as CharacterApiData;
 
           if (!res.ok) {
-            newPlayers.push({ id, name, realm, role: "UNASSIGNED", error: data.error || "조회 실패" });
-          } else {
-            const resolvedName = typeof data.name === "string" && data.name.trim() ? data.name : name;
-            const resolvedRealm = typeof data.realm === "string" && data.realm.trim() ? data.realm : realm;
-            const resolvedId = `${resolvedName}-${resolvedRealm}`.toLowerCase();
-            if (stagedIds.has(resolvedId)) {
-              continue;
-            }
-            requestedIds.add(resolvedId);
-            stagedIds.add(resolvedId);
-
-            const myDefensives = data.talents?.filter((t: string) => DEFENSIVE_SKILLS.includes(t)) || [];
-            const defensivesWithState = myDefensives.map((d: string) => ({ name: d, isActive: true }));
-
-            newPlayers.push({
-              id: resolvedId,
-              name: resolvedName,
-              realm: resolvedRealm,
-              realmName: typeof data.realmName === "string" ? data.realmName : undefined,
-              health: data.health, armor: data.armor, versatility: data.versatility,
-              activeSpec: data.activeSpec, talents: data.talents,
-              itemLevel: data.itemLevel,
-              className: data.className,
-              bestPerfAvg: data.bestPerfAvg,
-              bestPerfDetails: data.bestPerfDetails ?? null,
-              defensives: defensivesWithState,
-              role: guessRole(data.activeSpec),
-            });
+            return { id: inputId, name, realm, role: "UNASSIGNED", error: data.error || "조회 실패" };
           }
-        } catch (error) {
-          const message = error instanceof DOMException && error.name === "AbortError"
+
+          const resolvedName = typeof data.name === "string" && data.name.trim() ? data.name : name;
+          const resolvedRealm = typeof data.realm === "string" && data.realm.trim() ? data.realm : realm;
+          const myDefensives = data.talents?.filter((t: string) => DEFENSIVE_SKILLS.includes(t)) || [];
+
+          return {
+            id: `${resolvedName}-${resolvedRealm}`.toLowerCase(),
+            name: resolvedName,
+            realm: resolvedRealm,
+            realmName: typeof data.realmName === "string" ? data.realmName : undefined,
+            health: data.health, armor: data.armor, versatility: data.versatility,
+            activeSpec: data.activeSpec, talents: data.talents,
+            itemLevel: data.itemLevel,
+            className: data.className,
+            bestPerfAvg: data.bestPerfAvg,
+            bestPerfDetails: data.bestPerfDetails ?? null,
+            defensives: myDefensives.map((d: string) => ({ name: d, isActive: true })),
+            role: guessRole(data.activeSpec),
+          };
+        } catch (err) {
+          const message = err instanceof DOMException && err.name === "AbortError"
             ? "조회 시간 초과"
             : "통신 에러";
-          newPlayers.push({ id, name, realm, role: "UNASSIGNED", error: message });
+          return { id: inputId, name, realm, role: "UNASSIGNED", error: message };
+        } finally {
+          clearTimeout(timeout);
         }
+      };
+
+      const settled = await Promise.allSettled(fetchEntries.map(fetchOne));
+      const fetchedPlayers = settled.map((r, i) =>
+        r.status === "fulfilled"
+          ? r.value
+          : { id: fetchEntries[i].inputId, name: fetchEntries[i].name, realm: fetchEntries[i].realm, role: "UNASSIGNED" as const, error: "통신 에러" }
+      );
+
+      // 3단계: API 응답 후 resolvedId 기준 최종 중복 제거
+      const resolvedIds = new Set(existingIds);
+      const newPlayers: PlayerData[] = [...immediateErrors];
+      for (const p of fetchedPlayers) {
+        if (!p.error && resolvedIds.has(p.id)) {
+          skipped.push(p.name);
+          continue;
+        }
+        if (!p.error) resolvedIds.add(p.id);
+        newPlayers.push(p);
       }
 
       if (newPlayers.length > 0) {
