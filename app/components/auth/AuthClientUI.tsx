@@ -4,21 +4,24 @@ import { useState, useTransition } from 'react';
 import { login, signup, signout } from '@/app/actions/auth';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/app/utils/supabase/client';
+import ProfileModal from '@/app/components/profile/ProfileModal';
 
 const supabase = createClient();
 
 export default function AuthClientUI({ user }: { user: User | null }) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoginMode, setIsLoginMode] = useState(true);
-  const [isPending, startTransition] = useTransition();
+  const [isAuthOpen,    setIsAuthOpen]    = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLoginMode,   setIsLoginMode]   = useState(true);
+  const [isPending,     startTransition]  = useTransition();
   const [isOAuthPending, setIsOAuthPending] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg,   setErrorMsg]   = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const avatarUrl   = (user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture) as string | undefined;
+  const displayName = (user?.user_metadata?.name ?? user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '사용자') as string;
+
   const handleSignOut = () => {
-    startTransition(async () => {
-      await signout();
-    });
+    startTransition(async () => { await signout(); });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -29,20 +32,14 @@ export default function AuthClientUI({ user }: { user: User | null }) {
     const formData = new FormData(form);
 
     startTransition(async () => {
-      let result;
-      if (isLoginMode) {
-        result = await login(formData);
-      } else {
-        result = await signup(formData);
-      }
-
+      const result = isLoginMode ? await login(formData) : await signup(formData);
       if (result?.error) {
         setErrorMsg(result.error);
       } else if (result?.success) {
         if (!isLoginMode && result.message) {
           setSuccessMsg(result.message);
         } else {
-          setIsModalOpen(false);
+          setIsAuthOpen(false);
           form.reset();
         }
       }
@@ -51,71 +48,94 @@ export default function AuthClientUI({ user }: { user: User | null }) {
 
   const handleGoogleSignIn = async () => {
     setErrorMsg('');
-    setSuccessMsg('');
     setIsOAuthPending(true);
-
-    const redirectTo = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-
-    if (error) {
-      setErrorMsg(error.message);
-      setIsOAuthPending(false);
-    }
+    if (error) { setErrorMsg(error.message); setIsOAuthPending(false); }
   };
 
+  // ── 로그인 상태 ──────────────────────────────────────────
   if (user) {
     return (
-      <div className="flex items-center gap-4 bg-gray-800/80 backdrop-blur-md px-5 py-2.5 rounded-full border border-gray-700 shadow-lg pointer-events-auto">
-        <div className="text-sm font-medium text-gray-200">
-          <span className="text-emerald-400 font-bold">{user.email?.split('@')[0]}</span> 님 환영합니다
+      <>
+        <div className="flex items-center gap-2 bg-gray-800/80 backdrop-blur-md px-3 py-2 rounded-full border border-gray-700 shadow-lg pointer-events-auto">
+          {/* 프로필 버튼 */}
+          <button
+            onClick={() => setIsProfileOpen(true)}
+            className="flex items-center gap-2.5 px-2 py-1 rounded-full hover:bg-gray-700/60 transition-colors group"
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="w-7 h-7 rounded-full border border-gray-600 object-cover"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-xs font-black text-white">
+                {displayName[0]?.toUpperCase()}
+              </div>
+            )}
+            <span className="text-sm font-semibold text-gray-200 group-hover:text-white transition-colors">
+              {displayName}
+            </span>
+            <svg className="w-3 h-3 text-gray-500 group-hover:text-gray-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <div className="w-px h-4 bg-gray-600" />
+
+          <button
+            onClick={handleSignOut}
+            disabled={isPending}
+            className="px-3 py-1.5 text-xs font-bold text-gray-400 hover:text-white transition-colors disabled:opacity-50 rounded-full hover:bg-gray-700/60"
+          >
+            {isPending ? '처리 중...' : '로그아웃'}
+          </button>
         </div>
-        <div className="w-px h-4 bg-gray-600"></div>
-        <button
-          onClick={handleSignOut}
-          disabled={isPending}
-          className="text-sm font-bold text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-        >
-          {isPending ? '처리 중...' : '로그아웃'}
-        </button>
-      </div>
+
+        {/* 프로필 모달 */}
+        {isProfileOpen && (
+          <ProfileModal user={user} onClose={() => setIsProfileOpen(false)} />
+        )}
+      </>
     );
   }
 
+  // ── 비로그인 상태 ────────────────────────────────────────
   return (
     <div className="pointer-events-auto">
       <div className="flex gap-3 bg-gray-800/80 backdrop-blur-md px-3 py-2 rounded-full border border-gray-700 shadow-lg">
         <button
-          onClick={() => { setIsLoginMode(true); setIsModalOpen(true); }}
+          onClick={() => { setIsLoginMode(true); setIsAuthOpen(true); }}
           className="px-5 py-2 text-sm font-bold text-gray-200 hover:text-white hover:bg-gray-700 rounded-full transition-all"
         >
           로그인
         </button>
         <button
-          onClick={() => { setIsLoginMode(false); setIsModalOpen(true); }}
-          className="px-5 py-2 text-sm font-bold bg-cyan-600 hover:bg-cyan-500 text-white rounded-full transition-all shadow-[0_0_15px_rgba(8,145,178,0.4)] hover:shadow-[0_0_20px_rgba(8,145,178,0.6)]"
+          onClick={() => { setIsLoginMode(false); setIsAuthOpen(true); }}
+          className="px-5 py-2 text-sm font-bold bg-cyan-600 hover:bg-cyan-500 text-white rounded-full transition-all shadow-[0_0_15px_rgba(8,145,178,0.4)]"
         >
           회원가입
         </button>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          {/* 닫기 배경 */}
-          <div className="absolute inset-0" onClick={() => setIsModalOpen(false)}></div>
-          
-          <div className="relative w-full max-w-sm bg-gray-900 border border-gray-700 shadow-2xl rounded-3xl p-8 animate-in zoom-in-95 duration-200">
+      {isAuthOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setIsAuthOpen(false); }}
+        >
+          <div className="relative w-full max-w-sm bg-gray-900 border border-gray-700 shadow-2xl rounded-3xl p-8">
             <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-white transition-colors p-2 text-lg font-bold"
+              onClick={() => setIsAuthOpen(false)}
+              className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 text-gray-400 hover:text-white transition-colors text-sm"
             >
               ✕
             </button>
-            
+
             <h2 className="text-2xl font-black text-white mb-6 text-center tracking-tight">
               {isLoginMode ? 'SRP 환영합니다!' : 'SRP 시작하기'}
             </h2>
@@ -125,7 +145,6 @@ export default function AuthClientUI({ user }: { user: User | null }) {
                 {errorMsg}
               </div>
             )}
-            
             {successMsg && (
               <div className="mb-4 p-3 bg-emerald-900/30 border border-emerald-800 rounded-xl text-emerald-400 text-sm text-center font-medium leading-relaxed">
                 {successMsg}
@@ -144,7 +163,7 @@ export default function AuthClientUI({ user }: { user: User | null }) {
 
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-700"></div>
+                <div className="w-full border-t border-gray-700" />
               </div>
               <div className="relative flex justify-center text-xs uppercase tracking-[0.2em] text-gray-500">
                 <span className="bg-gray-900 px-3">또는</span>
@@ -155,45 +174,37 @@ export default function AuthClientUI({ user }: { user: User | null }) {
               <div>
                 <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">이메일</label>
                 <input
-                  type="email"
-                  name="email"
-                  required
-                  className="w-full px-4 py-3 bg-gray-800 border-2 border-transparent focus:border-cyan-500 rounded-xl text-white focus:outline-none transition-all font-sans text-sm"
+                  type="email" name="email" required
                   placeholder="예: email@domain.com"
+                  className="w-full px-4 py-3 bg-gray-800 border-2 border-transparent focus:border-cyan-500 rounded-xl text-white focus:outline-none transition-all text-sm"
                 />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">비밀번호</label>
                 <input
-                  type="password"
-                  name="password"
-                  required
-                  className="w-full px-4 py-3 bg-gray-800 border-2 border-transparent focus:border-cyan-500 rounded-xl text-white focus:outline-none transition-all font-sans text-sm"
+                  type="password" name="password" required
                   placeholder="비밀번호 입력"
+                  className="w-full px-4 py-3 bg-gray-800 border-2 border-transparent focus:border-cyan-500 rounded-xl text-white focus:outline-none transition-all text-sm"
                 />
               </div>
-
               <button
-                type="submit"
-                disabled={isPending}
-                className="mt-6 w-full py-3.5 bg-linear-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-gray-700 disabled:to-gray-700 disabled:text-gray-400 text-white font-bold rounded-xl transition-all shadow-lg text-sm tracking-wide"
+                type="submit" disabled={isPending}
+                className="mt-2 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-gray-700 disabled:to-gray-700 disabled:text-gray-400 text-white font-bold rounded-xl transition-all shadow-lg text-sm"
               >
                 {isPending ? '처리 중...' : isLoginMode ? '로그인' : '회원가입'}
               </button>
             </form>
 
-            <div className="mt-8 text-center text-sm text-gray-400 font-medium pb-2">
+            <div className="mt-6 text-center text-sm text-gray-400">
               {isLoginMode ? (
-                <>
-                  계정이 없으신가요?{' '}
-                  <button onClick={() => { setIsLoginMode(false); setErrorMsg(''); setSuccessMsg(''); }} className="text-cyan-400 font-bold hover:underline transition-colors ml-1">
+                <>계정이 없으신가요?{' '}
+                  <button onClick={() => { setIsLoginMode(false); setErrorMsg(''); setSuccessMsg(''); }} className="text-cyan-400 font-bold hover:underline ml-1">
                     회원가입
                   </button>
                 </>
               ) : (
-                <>
-                  이미 계정이 있으신가요?{' '}
-                  <button onClick={() => { setIsLoginMode(true); setErrorMsg(''); setSuccessMsg(''); }} className="text-cyan-400 font-bold hover:underline transition-colors ml-1">
+                <>이미 계정이 있으신가요?{' '}
+                  <button onClick={() => { setIsLoginMode(true); setErrorMsg(''); setSuccessMsg(''); }} className="text-cyan-400 font-bold hover:underline ml-1">
                     로그인
                   </button>
                 </>
