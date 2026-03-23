@@ -3,9 +3,14 @@
 import { createClient } from '../utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+function getString(formData: FormData, key: string): string | null {
+  const value = formData.get(key);
+  return typeof value === 'string' ? value.trim() : null;
+}
+
 export async function login(formData: FormData) {
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
+  const email = getString(formData, 'email');
+  const password = getString(formData, 'password');
 
   if (!email || !password) {
     return { error: '이메일과 비밀번호를 모두 입력해주세요.' }
@@ -27,8 +32,8 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
+  const email = getString(formData, 'email');
+  const password = getString(formData, 'password');
 
   if (!email || !password) {
     return { error: '이메일과 비밀번호를 모두 입력해주세요.' }
