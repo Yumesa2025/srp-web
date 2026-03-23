@@ -39,6 +39,7 @@ export default function RaidMarketTab() {
   const [parseIssues, setParseIssues]   = useState<ParseIssue[]>([]);
   const [raidSize, setRaidSize]         = useState(20);
   const [raidExpense, setRaidExpense]   = useState(0);
+  const [raidBonus, setRaidBonus]       = useState(0);
   const [isMetaLoading, setIsMetaLoading] = useState(false);
 
   const metaCacheRef = useRef<Map<string, ItemMeta>>(new Map());
@@ -49,13 +50,14 @@ export default function RaidMarketTab() {
   const payout = useMemo(() => {
     const safeSize    = sanitizeInt(raidSize, 20, 1);
     const safeExpense = sanitizeInt(raidExpense, 0);
+    const safeBonus   = sanitizeInt(raidBonus, 0);
     const totalGold   = ledgerItems.reduce((s, i) => s + i.gold, 0);
-    const expenseAmt  = Math.min(totalGold, safeExpense);
-    const distributable = Math.max(0, totalGold - expenseAmt);
+    const expenseAmt  = Math.min(totalGold + safeBonus, safeExpense);
+    const distributable = Math.max(0, totalGold + safeBonus - expenseAmt);
     const perPerson   = Math.floor(distributable / safeSize);
     const remainder   = distributable - perPerson * safeSize;
-    return { safeSize, safeExpense, totalGold, expenseAmt, distributable, perPerson, remainder };
-  }, [ledgerItems, raidSize, raidExpense]);
+    return { safeSize, safeExpense, safeBonus, totalGold, expenseAmt, distributable, perPerson, remainder };
+  }, [ledgerItems, raidSize, raidExpense, raidBonus]);
 
   const winnerSummary = useMemo(() => {
     const map = new Map<string, number>();
@@ -146,6 +148,7 @@ export default function RaidMarketTab() {
     const lines = [
       "[SRP 전리품 정산]",
       `총 모금액: ${payout.totalGold.toLocaleString()}G`,
+      payout.safeBonus > 0 ? `추가금: ${payout.safeBonus.toLocaleString()}G` : null,
       payout.expenseAmt > 0 ? `공대비: ${payout.expenseAmt.toLocaleString()}G` : null,
       `분배 대상: ${payout.distributable.toLocaleString()}G`,
       `1인당 분배금(${payout.safeSize}인): ${payout.perPerson.toLocaleString()}G`,
@@ -320,11 +323,20 @@ export default function RaidMarketTab() {
                       className="w-20 p-1.5 bg-gray-800 border border-gray-600 rounded-lg text-center text-white text-sm outline-none focus:border-yellow-500"
                     />
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400 text-sm">공대 추가금(G)</span>
+                    <input
+                      type="number" min={0} value={raidBonus}
+                      onChange={(e) => setRaidBonus(sanitizeInt(Number(e.target.value), 0))}
+                      className="w-20 p-1.5 bg-gray-800 border border-gray-600 rounded-lg text-center text-white text-sm outline-none focus:border-emerald-500"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1.5 border-t border-gray-700 pt-3 text-sm">
                   {[
                     { label: "총 모금액",  value: `${payout.totalGold.toLocaleString()} G`,      color: "text-yellow-300" },
+                    ...(payout.safeBonus > 0 ? [{ label: "추가금", value: `+ ${payout.safeBonus.toLocaleString()} G`, color: "text-emerald-400" }] : []),
                     { label: "공대비",     value: `- ${payout.expenseAmt.toLocaleString()} G`,    color: "text-red-300" },
                     { label: "분배 대상",  value: `${payout.distributable.toLocaleString()} G`,   color: "text-gray-300" },
                     { label: "분배 잔액",  value: `${payout.remainder.toLocaleString()} G`,        color: "text-gray-500" },
