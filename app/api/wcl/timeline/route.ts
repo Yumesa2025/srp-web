@@ -61,11 +61,17 @@ export async function GET(request: Request) {
     const accessToken = tokenData.access_token;
     if (!accessToken) throw new Error('WCL 토큰 발급 실패');
 
-    // [수정됨] masterData를 추가로 요청해서 스킬 이름 사전을 같이 받아옴
+    const parsedFightId = Number(fightId);
+    const parsedStartTime = Number(startTime);
+    const parsedEndTime = Number(endTime);
+    if (!Number.isFinite(parsedFightId) || !Number.isFinite(parsedStartTime) || !Number.isFinite(parsedEndTime)) {
+      return NextResponse.json({ error: '유효하지 않은 숫자 파라미터입니다.' }, { status: 400 });
+    }
+
     const query = `
-      query {
+      query($code: String!, $fightIDs: [Int]!, $start: Float!, $end: Float!) {
         reportData {
-          report(code: "${reportId}") {
+          report(code: $code) {
             masterData {
               abilities {
                 gameID
@@ -73,11 +79,11 @@ export async function GET(request: Request) {
               }
             }
             events(
-              fightIDs: [${fightId}], 
-              dataType: Casts, 
-              hostilityType: Enemies, 
-              startTime: ${startTime}, 
-              endTime: ${endTime}, 
+              fightIDs: $fightIDs,
+              dataType: Casts,
+              hostilityType: Enemies,
+              startTime: $start,
+              endTime: $end,
               limit: 10000
             ) {
               data
@@ -86,6 +92,12 @@ export async function GET(request: Request) {
         }
       }
     `;
+    const variables = {
+      code: reportId,
+      fightIDs: [parsedFightId],
+      start: parsedStartTime,
+      end: parsedEndTime,
+    };
 
     const wclRes = await fetch('https://www.warcraftlogs.com/api/v2/client', {
       method: 'POST',
@@ -93,7 +105,7 @@ export async function GET(request: Request) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, variables }),
       cache: 'no-store',
     });
 

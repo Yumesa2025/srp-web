@@ -299,14 +299,18 @@ export const detectWipeTailStart = (deathSeconds: number[], fightDurationSec: nu
   return null;
 };
 
-export const fetchWclGraphQL = async (accessToken: string, query: string): Promise<WclGraphQlPayload> => {
+export const fetchWclGraphQL = async (
+  accessToken: string,
+  query: string,
+  variables?: Record<string, unknown>,
+): Promise<WclGraphQlPayload> => {
   const response = await fetch("https://www.warcraftlogs.com/api/v2/client", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, variables }),
     cache: "no-store",
   });
   return (await response.json()) as WclGraphQlPayload;
@@ -339,19 +343,20 @@ export const fetchPagedEvents = async (params: {
   let pages = 0;
   const allEvents: WclEventNode[] = [];
 
+  // dataType and hostilityType are GraphQL enums — kept inline since they're hardcoded
   while (pageStart < endTime && pages < maxPages) {
     const hostilityClause = hostilityType ? `hostilityType: ${hostilityType},` : "";
     const query = `
-      query {
+      query($code: String!, $fightIDs: [Int]!, $start: Float!, $end: Float!, $limit: Int!) {
         reportData {
-          report(code: "${reportId}") {
+          report(code: $code) {
             events(
-              fightIDs: [${fightId}],
+              fightIDs: $fightIDs,
               dataType: ${dataType},
               ${hostilityClause}
-              startTime: ${pageStart},
-              endTime: ${endTime},
-              limit: ${limit}
+              startTime: $start,
+              endTime: $end,
+              limit: $limit
             ) {
               data
               nextPageTimestamp
@@ -360,8 +365,9 @@ export const fetchPagedEvents = async (params: {
         }
       }
     `;
+    const variables = { code: reportId, fightIDs: [fightId], start: pageStart, end: endTime, limit };
 
-    const payload = await fetchWclGraphQL(accessToken, query);
+    const payload = await fetchWclGraphQL(accessToken, query, variables);
     if (payload?.errors?.length) {
       throw new Error(payload.errors[0].message || `${dataType} 이벤트 조회 실패`);
     }

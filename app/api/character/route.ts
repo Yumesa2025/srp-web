@@ -145,14 +145,14 @@ function getLegacyBestPerfAvg(details: WclBestPerfDetails | null): number | null
 
 async function fetchWclRaidName(accessToken: string, zoneId: number): Promise<string | null> {
   try {
-    const query = `query { worldData { zone(id: ${zoneId}) { name } } }`;
+    const query = `query($zoneId: Int!) { worldData { zone(id: $zoneId) { name } } }`;
     const response = await fetch('https://www.warcraftlogs.com/api/v2/client', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, variables: { zoneId } }),
       cache: 'no-store',
     });
 
@@ -188,22 +188,17 @@ async function fetchWclBestPerfDetails(characterName: string, realmSlug: string)
     const accessToken = tokenData.access_token;
     if (!accessToken) return null;
 
-    const escapedName = characterName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    const escapedRealm = realmSlug
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"');
+    const normalizedRealm = realmSlug.toLowerCase().trim().replace(/\s+/g, '-');
 
     const metrics: WclMetric[] = ['hps', 'dps', 'tankhps'];
     let bestCandidate: (WclBestPerfDetails & { zoneId: number | null; peak: number }) | null = null;
 
     for (const metric of metrics) {
+      // metric is an enum (CharacterRankingMetricType) — kept inline since it's hardcoded
       const query = `
-        query {
+        query($name: String!, $server: String!, $region: String!) {
           characterData {
-            character(name: "${escapedName}", serverSlug: "${escapedRealm}", serverRegion: "KR") {
+            character(name: $name, serverSlug: $server, serverRegion: $region) {
               normal: zoneRankings(difficulty: ${WCL_DIFFICULTY.normal}, metric: ${metric})
               heroic: zoneRankings(difficulty: ${WCL_DIFFICULTY.heroic}, metric: ${metric})
               mythic: zoneRankings(difficulty: ${WCL_DIFFICULTY.mythic}, metric: ${metric})
@@ -211,6 +206,7 @@ async function fetchWclBestPerfDetails(characterName: string, realmSlug: string)
           }
         }
       `;
+      const variables = { name: characterName, server: normalizedRealm, region: "KR" };
 
       const graphResponse = await fetch('https://www.warcraftlogs.com/api/v2/client', {
         method: 'POST',
@@ -218,7 +214,7 @@ async function fetchWclBestPerfDetails(characterName: string, realmSlug: string)
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, variables }),
         cache: 'no-store',
       });
 

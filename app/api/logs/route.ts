@@ -80,9 +80,9 @@ export async function POST(request: Request) {
     }
 
     const fightQuery = `
-      query {
+      query($code: String!) {
         reportData {
-          report(code: "${reportId}") {
+          report(code: $code) {
             fights {
               id
               name
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       }
     `;
 
-    const fightData = await fetchWclGraphQL(accessToken, fightQuery);
+    const fightData = await fetchWclGraphQL(accessToken, fightQuery, { code: reportId });
     if (fightData?.errors?.length) {
       throw new Error(fightData.errors[0].message || "WCL fight 조회 실패");
     }
@@ -123,9 +123,9 @@ export async function POST(request: Request) {
     }
 
     const masterQuery = `
-      query {
+      query($code: String!) {
         reportData {
-          report(code: "${reportId}") {
+          report(code: $code) {
             masterData {
               abilities { gameID name }
               actors { id name type subType petOwner }
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
       }
     `;
 
-    const masterData = await fetchWclGraphQL(accessToken, masterQuery);
+    const masterData = await fetchWclGraphQL(accessToken, masterQuery, { code: reportId });
     if (masterData?.errors?.length) {
       throw new Error(masterData.errors[0].message || "WCL masterData 조회 실패");
     }

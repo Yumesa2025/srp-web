@@ -57,9 +57,9 @@ export async function GET(request: Request) {
 
     // 2. [핵심] WCL GraphQL 쿼리 작성 (해당 로그의 보스 킬 목록 가져오기)
     const query = `
-      query {
+      query($code: String!) {
         reportData {
-          report(code: "${reportId}") {
+          report(code: $code) {
             fights {
               id
               name
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, variables: { code: reportId } }),
       cache: 'no-store',
     });
 

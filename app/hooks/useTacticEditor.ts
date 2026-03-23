@@ -174,9 +174,7 @@ export function useTacticEditor(players: PlayerData[]) {
     setSpellConfig((prev) => ({
       ...prev,
       [spellId]: {
-        type: prev[spellId]?.type || "광역",
-        danger: prev[spellId]?.danger || "보통",
-        memo: prev[spellId]?.memo || "",
+        ...{ type: "광역", danger: "보통", memo: "" },
         ...prev[spellId],
         [field]: value,
       },

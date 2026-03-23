@@ -224,8 +224,8 @@ ${JSON.stringify(compactLog(failedLog), null, 2)}
     });
 
     if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Minimax API 에러: ${response.status} - ${errText}`);
+        console.error(`Minimax API 에러: ${response.status}`);
+        throw new Error("AI 서비스 요청에 실패했습니다.");
     }
 
     const data = (await response.json()) as MinimaxResponse;
