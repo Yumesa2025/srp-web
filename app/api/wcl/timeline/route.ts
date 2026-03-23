@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-
-interface WclTokenResponse {
-  access_token?: string;
-}
+import { getWclToken } from '@/app/lib/tokenCache';
 
 interface TimelineEventNode {
   type: string;
@@ -43,23 +40,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const clientId     = process.env.WCL_CLIENT_ID;
-    const clientSecret = process.env.WCL_CLIENT_SECRET;
-    const authString   = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-
-    const tokenRes = await fetch('https://www.warcraftlogs.com/oauth/token', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${authString}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'grant_type=client_credentials',
-      cache: 'no-store',
-    });
-
-    const tokenData = (await tokenRes.json()) as WclTokenResponse;
-    const accessToken = tokenData.access_token;
-    if (!accessToken) throw new Error('WCL 토큰 발급 실패');
+    const accessToken = await getWclToken();
 
     const parsedFightId = Number(fightId);
     const parsedStartTime = Number(startTime);

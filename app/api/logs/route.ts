@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
+import { getWclToken } from "@/app/lib/tokenCache";
 
 const LogsRequestSchema = z.object({
   reportId: z.string().min(1, "reportId가 필요합니다."),
@@ -57,27 +58,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "reportId가 필요합니다." }, { status: 400 });
     }
 
-    const clientId = process.env.WCL_CLIENT_ID;
-    const clientSecret = process.env.WCL_CLIENT_SECRET;
-    if (!clientId || !clientSecret) {
-      return NextResponse.json({ error: "WCL_CLIENT_ID / WCL_CLIENT_SECRET 환경변수를 설정해 주세요." }, { status: 500 });
-    }
-
-    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-    const tokenRes = await fetch("https://www.warcraftlogs.com/oauth/token", {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${authString}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: "grant_type=client_credentials",
-      cache: "no-store",
-    });
-    const tokenData = (await tokenRes.json()) as { access_token?: string };
-    const accessToken = tokenData.access_token;
-    if (!accessToken) {
-      return NextResponse.json({ error: "WCL 토큰 발급 실패" }, { status: 500 });
-    }
+    const accessToken = await getWclToken();
 
     const fightQuery = `
       query($code: String!) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getWclToken } from '@/app/lib/tokenCache';
 
 interface WclFightNode {
   id: number;
@@ -7,10 +8,6 @@ interface WclFightNode {
   endTime: number;
   kill?: boolean;
   bossPercentage?: number;
-}
-
-interface WclTokenResponse {
-  access_token?: string;
 }
 
 interface WclFightsResponse {
@@ -33,27 +30,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 1. WCL 임시 출입증(Access Token) 발급받기
-    const clientId = process.env.WCL_CLIENT_ID;
-    const clientSecret = process.env.WCL_CLIENT_SECRET;
-    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-
-    const tokenRes = await fetch('https://www.warcraftlogs.com/oauth/token', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${authString}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'grant_type=client_credentials',
-      cache: 'no-store',
-    });
-
-    const tokenData = (await tokenRes.json()) as WclTokenResponse;
-    const accessToken = tokenData.access_token;
-
-    if (!accessToken) {
-      throw new Error('WCL 토큰 발급 실패. ID/Secret을 확인하세요.');
-    }
+    // 1. WCL 토큰 (캐시에서 반환, 만료 시 자동 재발급)
+    const accessToken = await getWclToken();
 
     // 2. [핵심] WCL GraphQL 쿼리 작성 (해당 로그의 보스 킬 목록 가져오기)
     const query = `

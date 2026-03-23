@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveKrRealm } from '@/app/lib/krRealmResolver';
 import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
+import { getBlizzardToken, getWclToken } from '@/app/lib/tokenCache';
 
 type WclMetric = 'dps' | 'hps' | 'tankhps';
 
@@ -166,28 +167,10 @@ async function fetchWclRaidName(accessToken: string, zoneId: number): Promise<st
 }
 
 async function fetchWclBestPerfDetails(characterName: string, realmSlug: string): Promise<WclBestPerfDetails | null> {
-  const clientId = process.env.WCL_CLIENT_ID;
-  const clientSecret = process.env.WCL_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) return null;
+  if (!process.env.WCL_CLIENT_ID || !process.env.WCL_CLIENT_SECRET) return null;
 
   try {
-    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const tokenResponse = await fetch('https://www.warcraftlogs.com/oauth/token', {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${authString}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'grant_type=client_credentials',
-      cache: 'no-store',
-    });
-
-    if (!tokenResponse.ok) return null;
-    const tokenData = (await tokenResponse.json()) as { access_token?: string };
-    const accessToken = tokenData.access_token;
-    if (!accessToken) return null;
-
+    const accessToken = await getWclToken();
     const normalizedRealm = realmSlug.toLowerCase().trim().replace(/\s+/g, '-');
 
     const metrics: WclMetric[] = ['hps', 'dps', 'tankhps'];
@@ -302,28 +285,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 1. 블리자드 API 임시 출입증(Access Token) 발급
-    const clientId = process.env.BLIZZARD_CLIENT_ID;
-    const clientSecret = process.env.BLIZZARD_CLIENT_SECRET;
-    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-
-    const tokenResponse = await fetch('https://oauth.battle.net/token', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${authString}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'grant_type=client_credentials',
-      cache: 'no-store',
-    });
-
-    const tokenData = (await tokenResponse.json()) as { access_token?: string };
-    const accessToken = tokenData.access_token;
-
-    if (!accessToken) {
-      throw new Error('블리자드 출입증 발급 실패! ID/비번을 확인하세요.');
-    }
-
+    // 1. 블리자드 토큰 (캐시에서 반환, 만료 시 자동 재발급)
+    const accessToken = await getBlizzardToken();
     const resolvedRealm = await resolveKrRealm(accessToken, realm);
     const realmSlug = resolvedRealm.slug;
 
