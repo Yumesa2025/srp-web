@@ -117,4 +117,12 @@ data/
 - 경로 별칭: `@/app/...`
 - WoW 클래스명, 역할명은 한국어로 처리 (guessRole에서 한국어 스펙명으로 역할 유추)
 - Supabase 인증: SSR 방식 (`@supabase/ssr`) — Header는 서버에서 유저 확인, 클라이언트 훅은 `onAuthStateChange`
-- 데이터 저장 패턴: 로스터 → Server Actions, 전술 → 클라이언트 직접 Supabase (불일치 있음)
+- 데이터 저장 패턴 (현재 불일치):
+  - **로스터** → `app/actions/roster.ts` Server Actions 경유 (서버 검증 가능)
+  - **전술** → `useTacticStorage.ts`에서 클라이언트가 Supabase 직접 호출 (RLS에 의존)
+  - 통일 방향: 전술도 Server Actions로 옮기면 서버 검증 일관성 확보 가능 (현재는 대규모 리팩토링 필요하여 보류)
+
+## 인프라 한계 및 개선 메모
+
+- **Rate Limiter** (`app/lib/rateLimit.ts`): `globalThis` 기반 in-memory Map. 동일 isolate 내에서는 정상 동작하나, Cloudflare Workers 다중 isolate 환경에서 cross-isolate 공유 불가. 완전한 rate limiting이 필요하면 Cloudflare KV 또는 Durable Objects 도입 필요.
+- **OAuth 토큰 캐시** (`app/lib/tokenCache.ts`): `globalThis` 기반으로 동일 isolate 내 요청 간 WCL/Blizzard 토큰 공유. 다중 isolate 시 각각 독립 캐시.
