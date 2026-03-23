@@ -5,15 +5,11 @@ import { DEFENSIVE_SKILLS } from "@/app/constants/defensiveSkills";
 import { MainTab, PlayerData, RoleType } from "@/app/types";
 
 import MainTabs from "@/app/components/MainTabs";
-import ClinicAnalysisTab from "@/app/components/clinic/ClinicAnalysisTab";
-import TacticEditorTab from "@/app/components/tactics/TacticEditorTab";
 import RaidMarketTab from "@/app/components/market/RaidMarketTab";
 import ErrorBoundary from "@/app/components/ErrorBoundary";
 import RosterTab from "@/app/components/roster/RosterTab";
 
-import { useTacticEditor } from "@/app/hooks/useTacticEditor";
 import { guessRole } from "@/app/lib/raidUtils";
-import { useClinicState } from "@/app/hooks/useClinicState";
 import { useAnalytics } from "@/app/hooks/useAnalytics";
 
 const CHAR_FETCH_TIMEOUT_MS = 15_000;
@@ -27,13 +23,6 @@ export default function Home() {
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
   const [skippedDuplicates, setSkippedDuplicates] = useState<string[]>([]);
 
-  const tacticEditor = useTacticEditor(players);
-  const {
-    failedLogsInput, setFailedLogsInput,
-    clinicSampleStepSec, setClinicSampleStepSec,
-    analysisError, isAnalysisLoading, clinicReports,
-    analyzeLogs,
-  } = useClinicState();
   const analytics = useAnalytics();
 
   const fetchRaidData = async () => {
@@ -197,7 +186,6 @@ export default function Home() {
 
   const removePlayer = (playerId: string) => {
     setPlayers((prev) => prev.filter((p) => p.id !== playerId));
-    tacticEditor.onPlayerRemoved(playerId);
     if (draggedPlayerId === playerId) setDraggedPlayerId(null);
   };
 
@@ -222,75 +210,6 @@ export default function Home() {
               onDragStart={handleDragStart}
               onRemovePlayer={removePlayer}
               onToggleDefensive={toggleDefensive}
-            />
-          </ErrorBoundary>
-        )}
-
-        {activeTab === "TACTIC_EDITOR" && (
-          <ErrorBoundary>
-            <TacticEditorTab
-              copyMrtNote={tacticEditor.copyMrtNote}
-              selectedBossId={tacticEditor.selectedBossId}
-              onSelectedBossIdChange={tacticEditor.setSelectedBossId}
-              difficulty={tacticEditor.difficulty}
-              onDifficultyChange={tacticEditor.setDifficulty}
-              newNodeTime={tacticEditor.newNodeTime}
-              onNewNodeTimeChange={tacticEditor.setNewNodeTime}
-              newNodePlayerId={tacticEditor.newNodePlayerId}
-              onNewNodePlayerIdChange={tacticEditor.setNewNodePlayerId}
-              newNodeSpell={tacticEditor.newNodeSpell}
-              onNewNodeSpellChange={tacticEditor.setNewNodeSpell}
-              players={players}
-              addMrtNode={tacticEditor.addMrtNode}
-              showEmptyTicks={tacticEditor.showEmptyTicks}
-              onToggleShowEmptyTicks={() => tacticEditor.setShowEmptyTicks((prev) => !prev)}
-              visibleTimelineSeconds={tacticEditor.visibleTimelineSeconds}
-              secondsToTime={tacticEditor.secondsToTime}
-              currentTimeline={tacticEditor.currentTimeline}
-              mrtNodes={tacticEditor.mrtNodes}
-              dragHoverTime={tacticEditor.dragHoverTime}
-              onDragHoverTimeChange={tacticEditor.setDragHoverTime}
-              draggedMrtNodeId={tacticEditor.draggedMrtNodeId}
-              onDraggedMrtNodeIdChange={tacticEditor.setDraggedMrtNodeId}
-              updateNodeTime={tacticEditor.updateNodeTime}
-              spellDetails={tacticEditor.spellDetails}
-              cooldownWarnings={tacticEditor.cooldownWarnings}
-              editingNodeId={tacticEditor.editingNodeId}
-              editingNodeTime={tacticEditor.editingNodeTime}
-              onEditingNodeTimeChange={tacticEditor.setEditingNodeTime}
-              startEditingNodeTime={tacticEditor.startEditingNodeTime}
-              saveEditingNodeTime={tacticEditor.saveEditingNodeTime}
-              cancelEditingNodeTime={tacticEditor.cancelEditingNodeTime}
-              updateNodeCooldown={tacticEditor.updateNodeCooldown}
-              removeMrtNode={tacticEditor.removeMrtNode}
-              uniqueSpells={tacticEditor.uniqueSpells}
-              spellConfig={tacticEditor.spellConfig}
-              handleSpellConfigChange={tacticEditor.handleSpellConfigChange}
-              generateAiTactic={tacticEditor.generateAiTactic}
-              isAiLoading={tacticEditor.isAiLoading}
-              aiTactic={tacticEditor.aiTactic}
-              savedTactics={tacticEditor.savedTactics}
-              isLoggedIn={tacticEditor.isLoggedIn}
-              isSaving={tacticEditor.isSaving}
-              isTacticsLoading={tacticEditor.isTacticsLoading}
-              onSaveTactic={tacticEditor.saveTactic}
-              onLoadTactic={tacticEditor.loadTactic}
-              onDeleteTactic={tacticEditor.deleteTactic}
-            />
-          </ErrorBoundary>
-        )}
-
-        {activeTab === "RAID_AI_ANALYSIS" && (
-          <ErrorBoundary>
-            <ClinicAnalysisTab
-              failedLogsInput={failedLogsInput}
-              onFailedLogsInputChange={setFailedLogsInput}
-              clinicSampleStepSec={clinicSampleStepSec}
-              onClinicSampleStepSecChange={setClinicSampleStepSec}
-              onAnalyze={() => analyzeLogs((count) => analytics.trackClinicAnalyze(count))}
-              isAnalysisLoading={isAnalysisLoading}
-              analysisError={analysisError}
-              clinicReports={clinicReports}
             />
           </ErrorBoundary>
         )}
