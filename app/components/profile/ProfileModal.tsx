@@ -139,15 +139,10 @@ export default function ProfileModal({ user, onClose }: Props) {
           </div>
 
           {/* 통계 */}
-          <div className="grid grid-cols-3 gap-3 mt-5">
+          <div className="grid grid-cols-2 gap-3 mt-5">
             {[
               { label: "파티원 명단", value: isLoading ? "–" : `${rosters.length}개`, color: "text-cyan-400" },
               { label: "공대 거래",   value: isLoading ? "–" : `${sessions.length}회`, color: "text-yellow-400" },
-              {
-                label: "누적 모금",
-                value: isLoading ? "–" : `${sessions.reduce((s, r) => s + r.total_gold, 0).toLocaleString()}G`,
-                color: "text-emerald-400",
-              },
             ].map(({ label, value, color }) => (
               <div key={label} className="bg-gray-800/60 rounded-xl p-3 text-center border border-gray-700/50">
                 <p className={`text-lg font-black ${color}`}>{value}</p>
