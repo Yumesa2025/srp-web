@@ -10,7 +10,10 @@
       "mcp__supabase__execute_sql",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(cat /c/project/srp-web/.eslintrc.*)"
+      "Bash(cat /c/project/srp-web/.eslintrc.*)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__get_project",
+      "mcp__supabase__get_advisors"
     ]
   }
 }
