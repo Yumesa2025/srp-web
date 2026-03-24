@@ -38,18 +38,6 @@ export default function RaidAnalysisTab() {
     });
   }, []);
 
-  if (isLoggedIn === null) return null;
-
-  if (!isLoggedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <p className="text-4xl">🔒</p>
-        <p className="text-white font-bold text-lg">로그인이 필요합니다</p>
-        <p className="text-gray-500 text-sm">공대 분석 기능은 로그인 후 이용할 수 있습니다.</p>
-      </div>
-    );
-  }
-
   // 전투 목록 불러오기
   const loadFights = useCallback(async (overrideUrl?: string) => {
     const raw = overrideUrl ?? urlInput;
@@ -108,6 +96,18 @@ export default function RaidAnalysisTab() {
   }, [reportCode]);
 
   const selectedFight = fights.find(f => f.id === selectedFightId);
+
+  if (isLoggedIn === null) return null;
+
+  if (!isLoggedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <p className="text-4xl">🔒</p>
+        <p className="text-white font-bold text-lg">로그인이 필요합니다</p>
+        <p className="text-gray-500 text-sm">공대 분석 기능은 로그인 후 이용할 수 있습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
