@@ -261,10 +261,10 @@ export default function RaidMarketTab() {
             {/* ── 아이템 목록 ── */}
             <div className="xl:col-span-2 bg-gray-900 rounded-xl border border-gray-700 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-                <h3 className="text-gray-300 font-bold text-sm">📦 거래 내역</h3>
-                <span className="text-xs text-gray-600">{ledgerItems.length}건</span>
+                <h3 className="text-gray-300 font-bold text-xl">📦 거래 내역</h3>
+                <span className="text-sm text-gray-600">{ledgerItems.length}건</span>
               </div>
-              <div className="divide-y divide-gray-800 max-h-[420px] overflow-y-auto">
+              <div className="divide-y divide-gray-800 max-h-[520px] overflow-y-auto">
                 {ledgerItems.map((item) => (
                   <div
                     key={item.rowId}
@@ -274,24 +274,24 @@ export default function RaidMarketTab() {
                       <LazyImage
                         src={item.iconUrl}
                         alt={item.itemName}
-                        className="w-9 h-9 rounded-lg border border-gray-700 shrink-0"
+                        className="w-12 h-12 rounded-lg border border-gray-700 shrink-0"
                       />
                       <div className="min-w-0">
                         <a
                           href={/^\d+$/.test(item.itemId) ? `https://www.wowhead.com/ko/item=${item.itemId}` : undefined}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-purple-300 hover:text-purple-200 hover:underline font-semibold text-sm truncate block"
+                          className="text-purple-300 hover:text-purple-200 hover:underline font-semibold text-lg truncate block"
                         >
                           {item.itemName}
                         </a>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="text-sm text-gray-500 mt-0.5">
                           ID: <span className="font-mono">{item.itemId}</span>
                           {" · "}낙찰자: <span className="text-gray-300 font-medium">{item.winner}</span>
                         </p>
                       </div>
                     </div>
-                    <span className="font-mono text-yellow-400 font-bold text-sm shrink-0">
+                    <span className="font-mono text-yellow-400 font-bold text-lg shrink-0">
                       {item.gold.toLocaleString()} G
                     </span>
                   </div>
@@ -303,37 +303,37 @@ export default function RaidMarketTab() {
             <div className="flex flex-col gap-4">
               {/* 계산기 */}
               <div className="bg-gray-900 rounded-xl border border-gray-700 p-4">
-                <h3 className="text-yellow-300 font-bold text-sm mb-4 flex items-center gap-1.5">
+                <h3 className="text-yellow-300 font-bold text-xl mb-4 flex items-center gap-1.5">
                   🧮 분배 계산기
                 </h3>
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm">공대원 수</span>
+                    <span className="text-gray-400 text-lg">공대원 수</span>
                     <input
                       type="number" min={1} value={raidSize}
                       onChange={(e) => setRaidSize(sanitizeInt(Number(e.target.value), 20, 1))}
-                      className="w-20 p-1.5 bg-gray-800 border border-gray-600 rounded-lg text-center text-white text-sm outline-none focus:border-yellow-500"
+                      className="w-24 p-1.5 bg-gray-800 border border-gray-600 rounded-lg text-center text-white text-lg outline-none focus:border-yellow-500"
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm">공대비(G)</span>
+                    <span className="text-gray-400 text-lg">공대비(G)</span>
                     <input
                       type="number" min={0} value={raidExpense}
                       onChange={(e) => setRaidExpense(sanitizeInt(Number(e.target.value), 0))}
-                      className="w-20 p-1.5 bg-gray-800 border border-gray-600 rounded-lg text-center text-white text-sm outline-none focus:border-yellow-500"
+                      className="w-24 p-1.5 bg-gray-800 border border-gray-600 rounded-lg text-center text-white text-lg outline-none focus:border-yellow-500"
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm">공대 추가금(G)</span>
+                    <span className="text-gray-400 text-lg">공대 추가금(G)</span>
                     <input
                       type="number" min={0} value={raidBonus}
                       onChange={(e) => setRaidBonus(sanitizeInt(Number(e.target.value), 0))}
-                      className="w-20 p-1.5 bg-gray-800 border border-gray-600 rounded-lg text-center text-white text-sm outline-none focus:border-emerald-500"
+                      className="w-24 p-1.5 bg-gray-800 border border-gray-600 rounded-lg text-center text-white text-lg outline-none focus:border-emerald-500"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1.5 border-t border-gray-700 pt-3 text-sm">
+                <div className="space-y-1.5 border-t border-gray-700 pt-3 text-lg">
                   {[
                     { label: "총 모금액",  value: `${payout.totalGold.toLocaleString()} G`,      color: "text-yellow-300" },
                     ...(payout.safeBonus > 0 ? [{ label: "추가금", value: `+ ${payout.safeBonus.toLocaleString()} G`, color: "text-emerald-400" }] : []),
@@ -350,41 +350,21 @@ export default function RaidMarketTab() {
 
                 {/* 1인당 */}
                 <div className="mt-4 p-4 bg-gray-800 rounded-xl border border-yellow-500/40 text-center">
-                  <p className="text-gray-500 text-xs mb-1">최종 1인당 분배금</p>
-                  <p className="text-3xl font-bold text-yellow-200">
+                  <p className="text-gray-500 text-sm mb-1">최종 1인당 분배금</p>
+                  <p className="text-5xl font-bold text-yellow-200">
                     {payout.perPerson.toLocaleString()}
-                    <span className="text-lg text-yellow-400 ml-1">G</span>
+                    <span className="text-2xl text-yellow-400 ml-1">G</span>
                   </p>
-                  <p className="text-gray-600 text-xs mt-1">{payout.safeSize}인 기준</p>
+                  <p className="text-gray-600 text-sm mt-1">{payout.safeSize}인 기준</p>
                 </div>
 
                 {highestBid && (
-                  <p className="mt-3 text-xs text-gray-600 text-center">
+                  <p className="mt-3 text-sm text-gray-600 text-center">
                     최고 낙찰 · <span className="text-purple-400">{highestBid.itemName}</span>
                     {" "}{highestBid.gold.toLocaleString()}G
                   </p>
                 )}
               </div>
-
-              {/* 낙찰자 순위 */}
-              {winnerSummary.length > 0 && (
-                <div className="bg-gray-900 rounded-xl border border-gray-700 p-4">
-                  <h4 className="text-gray-400 font-bold text-xs mb-3">낙찰자별 낙찰금</h4>
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                    {winnerSummary.map(({ winner, total }, idx) => (
-                      <div key={winner} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-600 w-4 text-right">{idx + 1}</span>
-                          <span className="text-gray-300 truncate max-w-[100px]">{winner}</span>
-                        </div>
-                        <span className="font-mono text-yellow-400 font-semibold">
-                          {total.toLocaleString()}G
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
