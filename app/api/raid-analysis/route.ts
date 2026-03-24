@@ -69,7 +69,7 @@ export async function GET(request: Request) {
         reportData {
           report(code: $code) {
             fights {
-              id name startTime endTime kill bossPercentage
+              id name startTime endTime kill bossPercentage encounterID
             }
           }
         }
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
 
     const raw = (data?.data?.reportData?.report?.fights ?? []) as WclFightNode[];
     const fights: RaidFight[] = raw
-      .filter(f => typeof f.bossPercentage === 'number' || f.kill === true)
+      .filter(f => (f.encounterID ?? 0) > 0)
       .map(f => ({
         id: f.id,
         name: translateBossName(f.name || '알 수 없는 보스'),
