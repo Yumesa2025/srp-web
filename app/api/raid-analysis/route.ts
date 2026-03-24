@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         endTime: f.endTime,
       }));
 
-    return NextResponse.json({ fights, _debug: raw.slice(0, 3) });
+    return NextResponse.json({ fights, _debug: { raw: raw.slice(0, 3), report: data?.data?.reportData?.report ? 'exists' : 'null', errors: data?.errors ?? null } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '전투 목록을 불러오지 못했습니다.';
     return NextResponse.json({ error: msg }, { status: 500 });
