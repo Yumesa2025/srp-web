@@ -15,7 +15,9 @@
       "mcp__supabase__get_project",
       "mcp__supabase__get_advisors",
       "WebFetch(domain:raidplan.io)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"fightId\\\\|fight\\\\.id\" /c/project/srp-web/app/components --include=*.tsx)"
     ]
   }
 }

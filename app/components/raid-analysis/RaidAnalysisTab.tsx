@@ -59,8 +59,8 @@ export default function RaidAnalysisTab() {
   }, [urlInput]);
 
   // 전투 선택 → 분석
-  const analyzeFight = useCallback(async (fightId: number) => {
-    setSelectedFightId(fightId);
+  const analyzeFight = useCallback(async (fight: RaidFight) => {
+    setSelectedFightId(fight.id);
     setAnalysis(null);
     setError('');
     setIsAnalyzing(true);
@@ -77,7 +77,17 @@ export default function RaidAnalysisTab() {
       const res = await fetch('/api/raid-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reportCode, fightId, defensiveSpellNames, stepSec: 5 }),
+        body: JSON.stringify({
+          reportCode,
+          fightId: fight.id,
+          fightName: fight.name,
+          startTime: fight.startTime,
+          endTime: fight.endTime,
+          kill: fight.kill,
+          bossPercentage: fight.bossPercentage,
+          defensiveSpellNames,
+          stepSec: 5,
+        }),
       });
       const data = await res.json() as { result?: RaidAnalysisResult; error?: string };
       if (!res.ok) throw new Error(data.error ?? '분석에 실패했습니다.');
@@ -165,7 +175,7 @@ export default function RaidAnalysisTab() {
             {fights.map(fight => (
               <button
                 key={fight.id}
-                onClick={() => analyzeFight(fight.id)}
+                onClick={() => analyzeFight(fight)}
                 disabled={isAnalyzing && selectedFightId === fight.id}
                 className={`text-left p-3 rounded-xl border transition-all ${
                   selectedFightId === fight.id

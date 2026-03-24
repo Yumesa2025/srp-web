@@ -102,6 +102,11 @@ export async function GET(request: Request) {
 const AnalysisSchema = z.object({
   reportCode: z.string().min(1),
   fightId: z.number().int().positive(),
+  fightName: z.string(),
+  startTime: z.number(),
+  endTime: z.number(),
+  kill: z.boolean(),
+  bossPercentage: z.number().nullable(),
   defensiveSpellNames: z.array(z.string()).default([]),
   stepSec: z.number().int().min(1).max(30).default(5),
 });
@@ -116,18 +121,17 @@ export async function POST(request: Request) {
   const parsed = AnalysisSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues.map(i => i.message).join(', ') }, { status: 400 });
 
-  const { reportCode: rawCode, fightId, defensiveSpellNames, stepSec } = parsed.data;
+  const { reportCode: rawCode, fightId, fightName, startTime, endTime, kill, bossPercentage, defensiveSpellNames, stepSec } = parsed.data;
   const reportCode = extractReportCode(rawCode);
 
   try {
     const token = await getWclToken();
 
-    // 1. masterData + fight info
+    // 1. masterData 조회 (fights는 클라이언트에서 전달받음)
     const metaQuery = `
       query($code: String!) {
         reportData {
           report(code: $code) {
-            fights { id name startTime endTime kill bossPercentage }
             masterData {
               abilities { gameID name }
               actors { id name type subType petOwner }
@@ -140,10 +144,6 @@ export async function POST(request: Request) {
     if (metaData?.errors?.length) throw new Error(metaData.errors[0].message);
 
     const reportNode = metaData?.data?.reportData?.report;
-    const fights = (reportNode?.fights ?? []) as WclFightNode[];
-    const selectedFight = fights.find(f => f.id === fightId);
-    if (!selectedFight) return NextResponse.json({ error: '선택한 전투를 찾을 수 없습니다.' }, { status: 404 });
-
     const abilities = (reportNode?.masterData?.abilities ?? []) as WclAbilityNode[];
     const actors = (reportNode?.masterData?.actors ?? []) as WclActorNode[];
 
@@ -155,7 +155,6 @@ export async function POST(request: Request) {
     actors.forEach(a => { if (a.type === 'Player' && a.subType) actorClassMap.set(a.id, a.subType); });
     const playerIds = new Set(actors.filter(a => a.type === 'Player').map(a => a.id));
 
-    const { startTime, endTime } = selectedFight;
     const durationSec = Math.max(1, Math.floor((endTime - startTime) / 1000));
 
     // 2. 이벤트 병렬 조회 (힐링 추가)
@@ -421,11 +420,11 @@ export async function POST(request: Request) {
     // ── 결과 반환 ────────────────────────────────────────────
     const result: RaidAnalysisResult = {
       fight: {
-        id: selectedFight.id,
-        name: translateBossName(selectedFight.name ?? '알 수 없는 보스'),
+        id: fightId,
+        name: translateBossName(fightName),
         durationSec,
-        kill: Boolean(selectedFight.kill),
-        bossPercentage: selectedFight.bossPercentage ?? null,
+        kill,
+        bossPercentage,
       },
       wclUrl: `https://www.warcraftlogs.com/reports/${reportCode}#fight=${fightId}`,
       reportCode,
