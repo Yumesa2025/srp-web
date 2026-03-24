@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { RaidFight, RaidAnalysisResult, DefensiveEntry } from '@/app/types/raidAnalysis';
-import { getDefensiveSettings } from '@/app/actions/defensiveSettings';
+import type { RaidFight, RaidAnalysisResult } from '@/app/types/raidAnalysis';
 import DeathAnalysisSection from './DeathAnalysisSection';
 import ConsumablesSection from './ConsumablesSection';
 import DpsGraphSection from './DpsGraphSection';
 import DefensiveUsageSection from './DefensiveUsageSection';
-import DefensiveSettingsModal from './DefensiveSettingsModal';
 
 function extractCode(raw: string): string {
   const urlMatch = raw.trim().match(/reports\/([A-Za-z0-9]+)/i);
@@ -30,8 +28,6 @@ export default function RaidAnalysisTab() {
   const [analysis, setAnalysis]     = useState<RaidAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError]           = useState('');
-  const [showSettings, setShowSettings] = useState(false);
-  const [defensiveSettings, setDefensiveSettings] = useState<Record<string, DefensiveEntry[]> | null>(null);
 
   // 전투 목록 불러오기
   const loadFights = useCallback(async (overrideUrl?: string) => {
@@ -66,14 +62,6 @@ export default function RaidAnalysisTab() {
     setIsAnalyzing(true);
 
     try {
-      // 생존기 설정 로드 (캐시)
-      let settings = defensiveSettings;
-      if (!settings) {
-        settings = await getDefensiveSettings();
-        setDefensiveSettings(settings);
-      }
-      const defensiveEntries = Object.values(settings).flat();
-
       const res = await fetch('/api/raid-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,7 +73,6 @@ export default function RaidAnalysisTab() {
           endTime: fight.endTime,
           kill: fight.kill,
           bossPercentage: fight.bossPercentage,
-          defensiveEntries,
           stepSec: 5,
         }),
       });
@@ -97,7 +84,7 @@ export default function RaidAnalysisTab() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [reportCode, defensiveSettings]);
+  }, [reportCode]);
 
   const selectedFight = fights.find(f => f.id === selectedFightId);
 
@@ -105,21 +92,13 @@ export default function RaidAnalysisTab() {
     <div className="space-y-6">
       {/* ── 헤더 입력 ──────────────────────────────────────────── */}
       <div className="p-6 bg-gray-800 rounded-xl border border-gray-700 shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-cyan-400 flex items-center gap-2">
-              🔍 공대 분석
-            </h2>
-            <p className="text-gray-500 text-xs mt-1">
-              WarcraftLogs URL을 붙여넣고 분석할 전투를 선택하세요
-            </p>
-          </div>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs font-semibold rounded-lg transition-colors"
-          >
-            ⚙️ 생존기 설정
-          </button>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-cyan-400 flex items-center gap-2">
+            🔍 공대 분석
+          </h2>
+          <p className="text-gray-500 text-xs mt-1">
+            WarcraftLogs URL을 붙여넣고 분석할 전투를 선택하세요
+          </p>
         </div>
 
         <div className="flex gap-2">
@@ -256,16 +235,6 @@ export default function RaidAnalysisTab() {
         </div>
       )}
 
-      {/* ── 생존기 설정 모달 ──────────────────────────────────── */}
-      {showSettings && (
-        <DefensiveSettingsModal
-          onClose={() => setShowSettings(false)}
-          onSaved={(newSettings: Record<string, DefensiveEntry[]>) => {
-            setDefensiveSettings(newSettings);
-            setShowSettings(false);
-          }}
-        />
-      )}
     </div>
   );
 }

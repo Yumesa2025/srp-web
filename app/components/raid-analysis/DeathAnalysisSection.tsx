@@ -82,7 +82,8 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                     {/* 사망 원인 */}
                     <div>
                       <p className="text-gray-500 text-xs mb-1">사망 원인</p>
-                      <span className="px-2 py-1 bg-red-900/40 border border-red-800/40 text-red-300 text-sm rounded-md font-semibold">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-red-900/40 border border-red-800/40 text-red-300 text-sm rounded-md font-semibold">
+                        {death.causeIconUrl && <img src={death.causeIconUrl} alt="" className="w-4 h-4 rounded shrink-0" />}
                         {death.cause}
                       </span>
                     </div>

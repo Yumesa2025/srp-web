@@ -6,7 +6,9 @@ import { fetchWclGraphQL, fetchPagedEvents, WclActorNode, WclAbilityNode, WclEve
 import { BLOODLUST_ABILITY_NAMES } from '@/app/constants/defensiveDefaults';
 import { translateBossName } from '@/app/constants/bossNames';
 import { translatePotionName } from '@/app/constants/potionNames';
-import type { RaidFight, RaidAnalysisResult, EarlyDeath, ConsumableRow, AllPlayerData, BloodlustEvent, DefensiveUsagePlayer, DefensiveEntry } from '@/app/types/raidAnalysis';
+import { DEFENSIVE_SPELL_IDS } from '@/app/constants/defensiveSpellIds';
+import { getSpellLookup } from '@/app/lib/spellLookup';
+import type { RaidFight, RaidAnalysisResult, EarlyDeath, ConsumableRow, AllPlayerData, BloodlustEvent, DefensiveUsagePlayer } from '@/app/types/raidAnalysis';
 
 // ── 유틸 ──────────────────────────────────────────────────────
 function secondsToTime(sec: number): string {
@@ -142,7 +144,7 @@ const AnalysisSchema = z.object({
   endTime: z.number(),
   kill: z.boolean(),
   bossPercentage: z.number().nullable(),
-  defensiveEntries: z.array(z.object({ id: z.number().int().positive().optional(), name: z.string() })).default([]),
+  defensiveEntries: z.array(z.object({ id: z.number().int().positive().optional(), name: z.string() })).default([]).optional(), // kept for backward compat, not used
   stepSec: z.number().int().min(1).max(30).default(5),
 });
 
@@ -156,7 +158,7 @@ export async function POST(request: Request) {
   const parsed = AnalysisSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues.map(i => i.message).join(', ') }, { status: 400 });
 
-  const { reportCode: rawCode, fightId, fightName, startTime, endTime, kill, bossPercentage, defensiveEntries, stepSec } = parsed.data;
+  const { reportCode: rawCode, fightId, fightName, startTime, endTime, kill, bossPercentage, stepSec } = parsed.data;
   const reportCode = extractReportCode(rawCode);
 
   try {
@@ -212,17 +214,10 @@ export async function POST(request: Request) {
     damageEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
     healEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
 
-    // ── defensive 매칭 헬퍼 ────────────────────────────────────
-    const defensiveIdSet = new Set<number>();
-    const defensiveNameSet = new Set<string>();
-    (defensiveEntries as DefensiveEntry[]).forEach(e => {
-      if (e.id) defensiveIdSet.add(e.id);
-      defensiveNameSet.add(e.name.toLowerCase().trim());
-    });
+    // ── defensive 매칭 헬퍼 (spell ID 기반 자동 감지) ─────────
     const isDefensiveCast = (e: WclEventNode): boolean => {
-      const id = typeof e.abilityGameID === 'number' ? e.abilityGameID : (typeof e.ability?.guid === 'number' ? e.ability.guid : null);
-      if (id !== null && defensiveIdSet.has(id)) return true;
-      return defensiveNameSet.has(getAbilityName(e, abilityMap).toLowerCase().trim());
+      const id = e.abilityGameID ?? e.ability?.guid;
+      return typeof id === 'number' && DEFENSIVE_SPELL_IDS.has(id);
     };
 
     // ── 블러드러스트 타이밍 (먼저 계산해야 DPS 블러드구간 계산 가능) ──
@@ -284,22 +279,26 @@ export async function POST(request: Request) {
     });
 
     // ── 생존기 사용 현황 (allPlayers defensiveCasts를 위해 먼저 계산) ──
-    const defensiveUsageMap = new Map<string, { actorId: number; className?: string; specId?: number; casts: { ability: string; timeSec: number; timeStr: string }[] }>();
-    if (defensiveIdSet.size > 0 || defensiveNameSet.size > 0) {
-      castEvents.forEach(e => {
-        if (!e.timestamp || typeof e.sourceID !== 'number' || !fightPlayerIds.has(e.sourceID)) return;
-        if (!isDefensiveCast(e)) return;
-        const abilityName = getAbilityName(e, abilityMap);
-        const name = actorMap.get(e.sourceID) ?? '';
-        if (!name) return;
-        if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, { actorId: e.sourceID, className: actorClassMap.get(e.sourceID), specId: specIdMap.get(e.sourceID), casts: [] });
-        const timeSec = toFightSec(e.timestamp, startTime);
-        defensiveUsageMap.get(name)!.casts.push({ ability: abilityName, timeSec, timeStr: secondsToTime(timeSec) });
-      });
-    }
+    const defensiveUsageMap = new Map<string, { actorId: number; className?: string; specId?: number; casts: { ability: string; timeSec: number; timeStr: string; spellId?: number }[] }>();
+    castEvents.forEach(e => {
+      if (!e.timestamp || typeof e.sourceID !== 'number' || !fightPlayerIds.has(e.sourceID)) return;
+      if (!isDefensiveCast(e)) return;
+      const abilityName = getAbilityName(e, abilityMap);
+      const name = actorMap.get(e.sourceID) ?? '';
+      if (!name) return;
+      if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, { actorId: e.sourceID, className: actorClassMap.get(e.sourceID), specId: specIdMap.get(e.sourceID), casts: [] });
+      const timeSec = toFightSec(e.timestamp, startTime);
+      const spellId = e.abilityGameID ?? e.ability?.guid;
+      defensiveUsageMap.get(name)!.casts.push({ ability: abilityName, timeSec, timeStr: secondsToTime(timeSec), spellId: typeof spellId === 'number' ? spellId : undefined });
+    });
 
-    // ── 전체 플레이어 데이터 (탱/딜/힐 통합) ──────────────────
-    const allPlayers: AllPlayerData[] = [];
+    // ── 전체 플레이어 데이터 중간 계산 (타임라인) ────────────
+    type PlayerIntermediate = {
+      name: string; actorId: number; dpsSecMap: Map<number, number>; hpsSecMap: Map<number, number>;
+      totalDamage: number; totalHealing: number; maxDps: number; maxHps: number;
+      dpsTimeline: { sec: number; dps: number }[]; hpsTimeline: { sec: number; hps: number }[];
+    };
+    const playerIntermediates: PlayerIntermediate[] = [];
     fightPlayerIds.forEach(actorId => {
       const name = actorMap.get(actorId);
       if (!name) return;
@@ -334,38 +333,82 @@ export async function POST(request: Request) {
         hpsTimeline.push({ sec: s, hps });
       }
 
-      allPlayers.push({
-        name,
-        actorId,
-        className: actorClassMap.get(actorId),
-        specId: specIdMap.get(actorId),
-        totalDamage,
-        avgDps: Math.round(totalDamage / durationSec),
-        maxDps,
-        bloodlustAvgDps: calcBloodlustAvg(dpsSecMap, bloodlusts, durationSec),
-        dpsTimeline,
-        totalHealing,
-        avgHps: Math.round(totalHealing / durationSec),
-        maxHps,
-        bloodlustAvgHps: calcBloodlustAvg(hpsSecMap, bloodlusts, durationSec),
-        hpsTimeline,
-        defensiveCasts: defensiveUsageMap.get(name)?.casts.map(c => ({ ability: c.ability, timeSec: c.timeSec })) ?? [],
-        piTimings: piTimingMap.get(actorId) ?? [],
-      });
+      playerIntermediates.push({ name, actorId, dpsSecMap, hpsSecMap, totalDamage, totalHealing, maxDps, maxHps, dpsTimeline, hpsTimeline });
     });
-    allPlayers.sort((a, b) => b.totalDamage - a.totalDamage);
 
-    // ── 죽음 분석 ─────────────────────────────────────────────
+    // ── 죽음 분석 (사망 원인 ID 수집) ────────────────────────
     const sortedDeaths = deathEvents
       .filter(e => e.type === 'death' && typeof e.timestamp === 'number' && typeof e.targetID === 'number' && playerIds.has(e.targetID!))
       .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
 
     const allDeathTimes = sortedDeaths.map(e => toFightSec(e.timestamp!, startTime));
 
+    // Collect cause IDs for batch lookup
+    const earlyDeathCauseIds = new Set<number>();
+    sortedDeaths.slice(0, 3).forEach(death => {
+      const causeId = death.abilityGameID ?? death.ability?.guid;
+      if (typeof causeId === 'number' && causeId !== 0) earlyDeathCauseIds.add(causeId);
+    });
+
+    // ── Batch spell lookup (생존기 + 사망 원인) ──────────────
+    const spellIdsToLookup = new Set<number>();
+    defensiveUsageMap.forEach(p => p.casts.forEach(c => { if (c.spellId) spellIdsToLookup.add(c.spellId); }));
+    earlyDeathCauseIds.forEach(id => spellIdsToLookup.add(id));
+
+    const spellInfoMap = new Map<number, { name: string; iconUrl: string }>();
+    await Promise.all(
+      Array.from(spellIdsToLookup).map(async id => {
+        const info = await getSpellLookup(String(id));
+        spellInfoMap.set(id, { name: info.name, iconUrl: info.iconUrl });
+      })
+    );
+
+    // Apply Wowhead names to defensiveUsageMap casts
+    defensiveUsageMap.forEach(p => {
+      p.casts.forEach(c => {
+        if (c.spellId && spellInfoMap.has(c.spellId)) {
+          const info = spellInfoMap.get(c.spellId)!;
+          c.ability = info.name;
+        }
+      });
+    });
+
+    // ── 전체 플레이어 데이터 최종 빌드 (spellInfoMap 사용) ───
+    const allPlayers: AllPlayerData[] = playerIntermediates.map(p => ({
+      name: p.name,
+      actorId: p.actorId,
+      className: actorClassMap.get(p.actorId),
+      specId: specIdMap.get(p.actorId),
+      totalDamage: p.totalDamage,
+      avgDps: Math.round(p.totalDamage / durationSec),
+      maxDps: p.maxDps,
+      bloodlustAvgDps: calcBloodlustAvg(p.dpsSecMap, bloodlusts, durationSec),
+      dpsTimeline: p.dpsTimeline,
+      totalHealing: p.totalHealing,
+      avgHps: Math.round(p.totalHealing / durationSec),
+      maxHps: p.maxHps,
+      bloodlustAvgHps: calcBloodlustAvg(p.hpsSecMap, bloodlusts, durationSec),
+      hpsTimeline: p.hpsTimeline,
+      defensiveCasts: defensiveUsageMap.get(p.name)?.casts.map(c => ({
+        ability: c.ability,
+        timeSec: c.timeSec,
+        spellId: c.spellId,
+        iconUrl: c.spellId ? spellInfoMap.get(c.spellId)?.iconUrl : undefined,
+      })) ?? [],
+      piTimings: piTimingMap.get(p.actorId) ?? [],
+    }));
+    allPlayers.sort((a, b) => b.totalDamage - a.totalDamage);
+
+    // Build earlyDeaths with causeIconUrl
     const earlyDeaths: EarlyDeath[] = sortedDeaths.slice(0, 3).map((death, idx) => {
       const timeSec = toFightSec(death.timestamp!, startTime);
       const windowCount = allDeathTimes.filter(t => Math.abs(t - timeSec) <= 10).length;
       const isMassDeath = idx > 0 && windowCount >= 5;
+
+      const causeId = death.abilityGameID ?? death.ability?.guid;
+      const causeInfo = typeof causeId === 'number' && causeId !== 0 ? spellInfoMap.get(causeId) : undefined;
+      const causeName = causeInfo?.name ?? getAbilityName(death, abilityMap);
+      const causeIconUrl = causeInfo?.iconUrl;
 
       if (isMassDeath) {
         return {
@@ -376,7 +419,8 @@ export async function POST(request: Request) {
           specId: specIdMap.get(death.targetID!),
           timeSec,
           timeStr: secondsToTime(timeSec),
-          cause: getAbilityName(death, abilityMap),
+          cause: causeName,
+          causeIconUrl,
           hpBefore: null,
           defensivesUsed: [],
           isSkipped: true,
@@ -390,7 +434,7 @@ export async function POST(request: Request) {
           if (!c.timestamp || typeof c.sourceID !== 'number') return false;
           if (c.sourceID !== death.targetID) return false;
           if (c.timestamp < deathTs - 5000 || c.timestamp > deathTs) return false;
-          return (defensiveIdSet.size > 0 || defensiveNameSet.size > 0) ? isDefensiveCast(c) : true;
+          return isDefensiveCast(c);
         })
         .map(c => getAbilityName(c, abilityMap));
 
@@ -410,7 +454,8 @@ export async function POST(request: Request) {
         specId: specIdMap.get(death.targetID!),
         timeSec,
         timeStr: secondsToTime(timeSec),
-        cause: getAbilityName(death, abilityMap),
+        cause: causeName,
+        causeIconUrl,
         hpBefore,
         defensivesUsed: Array.from(new Set(defensivesUsed)),
         isSkipped: false,
@@ -460,7 +505,18 @@ export async function POST(request: Request) {
       .sort((a, b) => a.name.localeCompare(b.name));
 
     const defensiveUsage: DefensiveUsagePlayer[] = Array.from(defensiveUsageMap.entries())
-      .map(([name, { actorId, className, specId, casts }]) => ({ name, actorId, className, specId, casts: casts.sort((a, b) => a.timeSec - b.timeSec) }))
+      .map(([name, { actorId, className, specId, casts }]) => ({
+        name,
+        actorId,
+        className,
+        specId,
+        casts: casts
+          .sort((a, b) => a.timeSec - b.timeSec)
+          .map(c => ({
+            ...c,
+            iconUrl: c.spellId ? spellInfoMap.get(c.spellId)?.iconUrl : undefined,
+          })),
+      }))
       .sort((a, b) => b.casts.length - a.casts.length);
 
     // ── 결과 반환 ────────────────────────────────────────────

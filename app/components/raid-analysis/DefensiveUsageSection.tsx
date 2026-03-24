@@ -28,7 +28,7 @@ export default function DefensiveUsageSection({ players, makePlayerUrl }: Props)
       {!collapsed && (
         players.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
-            생존기 설정이 없거나 사용 기록이 없습니다.
+            이 전투에서 생존기 사용 기록이 없습니다.
           </div>
         ) : (
           <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -53,7 +53,8 @@ export default function DefensiveUsageSection({ players, makePlayerUrl }: Props)
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {player.casts.map((c, i) => (
-                    <span key={i} className="px-2 py-1 bg-cyan-900/30 border border-cyan-700/30 text-cyan-300 text-sm rounded-md">
+                    <span key={i} className="flex items-center gap-1 px-2 py-1 bg-cyan-900/30 border border-cyan-700/30 text-cyan-300 text-sm rounded-md">
+                      {c.iconUrl && <img src={c.iconUrl} alt="" className="w-4 h-4 rounded shrink-0" />}
                       {c.timeStr} {c.ability}
                     </span>
                   ))}

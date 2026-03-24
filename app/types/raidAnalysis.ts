@@ -22,6 +22,7 @@ export interface EarlyDeath {
   timeSec: number;
   timeStr: string;
   cause: string;
+  causeIconUrl?: string;
   hpBefore: number | null;
   defensivesUsed: string[];
   isSkipped: boolean;
@@ -54,7 +55,7 @@ export interface AllPlayerData {
   maxHps: number;
   bloodlustAvgHps: number | null;
   hpsTimeline: { sec: number; hps: number }[];
-  defensiveCasts: { ability: string; timeSec: number }[];
+  defensiveCasts: { ability: string; timeSec: number; spellId?: number; iconUrl?: string }[];
   piTimings: number[];  // Power Infusion received timestamps
 }
 
@@ -69,7 +70,7 @@ export interface DefensiveUsagePlayer {
   actorId: number;
   className?: string;
   specId?: number;
-  casts: { ability: string; timeSec: number; timeStr: string }[];
+  casts: { ability: string; timeSec: number; timeStr: string; spellId?: number; iconUrl?: string }[];
 }
 
 export interface RaidAnalysisResult {
