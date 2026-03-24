@@ -13,7 +13,9 @@
       "Bash(cat /c/project/srp-web/.eslintrc.*)",
       "mcp__supabase__list_tables",
       "mcp__supabase__get_project",
-      "mcp__supabase__get_advisors"
+      "mcp__supabase__get_advisors",
+      "WebFetch(domain:raidplan.io)",
+      "Bash(git push:*)"
     ]
   }
 }
