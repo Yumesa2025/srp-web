@@ -41,8 +41,18 @@ export async function getWclToken(): Promise<string> {
     cache: "no-store",
   });
 
-  const data = (await res.json()) as { access_token?: string; expires_in?: number };
-  if (!data.access_token) throw new Error("WCL 토큰 발급 실패");
+  const rawText = await res.text();
+  if (!res.ok) {
+    throw new Error(`WCL 토큰 발급 HTTP ${res.status}: ${rawText.slice(0, 500)}`);
+  }
+
+  let data: { access_token?: string; expires_in?: number };
+  try {
+    data = JSON.parse(rawText) as { access_token?: string; expires_in?: number };
+  } catch {
+    throw new Error(`WCL 토큰 응답 JSON 파싱 실패: ${rawText.slice(0, 500)}`);
+  }
+  if (!data.access_token) throw new Error(`WCL 토큰 발급 실패: ${rawText.slice(0, 500)}`);
 
   const expiresIn = typeof data.expires_in === "number" ? data.expires_in : 86400;
   globalThis.__wclToken = {

@@ -78,9 +78,32 @@ export async function GET(request: Request) {
     const data = await fetchWclGraphQL(token, query, { code });
     if (data?.errors?.length) throw new Error(data.errors[0].message);
 
-    const raw = (data?.data?.reportData?.report?.fights ?? []) as WclFightNode[];
+    const reportNode = data?.data?.reportData?.report;
+    if (!reportNode) {
+      return NextResponse.json({
+        error: `WCL 리포트를 찾지 못했습니다. report(code: "${code}")가 null입니다.`,
+        _debug: {
+          reportCode: code,
+          graphqlErrors: data?.errors ?? [],
+          reportExists: false,
+        },
+      }, { status: 404 });
+    }
+
+    if (!Array.isArray(reportNode.fights)) {
+      return NextResponse.json({
+        error: 'WCL 리포트는 찾았지만 fights 필드가 배열이 아닙니다.',
+        _debug: {
+          reportCode: code,
+          reportExists: true,
+          fightsIsArray: false,
+          fightsValue: reportNode.fights ?? null,
+        },
+      }, { status: 502 });
+    }
+
+    const raw = reportNode.fights as WclFightNode[];
     const fights: RaidFight[] = raw
-      .filter(f => typeof f.kill === 'boolean')
       .map(f => ({
         id: f.id,
         name: translateBossName(f.name || '알 수 없는 보스'),
@@ -91,7 +114,16 @@ export async function GET(request: Request) {
         endTime: f.endTime,
       }));
 
-    return NextResponse.json({ fights });
+    return NextResponse.json({
+      fights,
+      _debug: {
+        reportCode: code,
+        reportExists: true,
+        rawFightCount: raw.length,
+        mappedFightCount: fights.length,
+        rawPreview: raw.slice(0, 3),
+      },
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '전투 목록을 불러오지 못했습니다.';
     return NextResponse.json({ error: msg }, { status: 500 });

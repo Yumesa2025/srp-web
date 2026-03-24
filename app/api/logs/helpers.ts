@@ -314,7 +314,17 @@ export const fetchWclGraphQL = async (
     body: JSON.stringify({ query, variables }),
     cache: "no-store",
   });
-  return (await response.json()) as WclGraphQlPayload;
+  const rawText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`WCL GraphQL HTTP ${response.status}: ${rawText.slice(0, 500)}`);
+  }
+
+  try {
+    return JSON.parse(rawText) as WclGraphQlPayload;
+  } catch {
+    throw new Error(`WCL GraphQL JSON 파싱 실패: ${rawText.slice(0, 500)}`);
+  }
 };
 
 export const fetchPagedEvents = async (params: {
