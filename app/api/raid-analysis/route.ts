@@ -71,7 +71,7 @@ export async function GET(request: Request) {
         reportData {
           report(code: $code) {
             fights {
-              id name startTime endTime kill bossPercentage
+              id name startTime endTime kill bossPercentage size
             }
           }
         }
@@ -106,6 +106,7 @@ export async function GET(request: Request) {
 
     const raw = reportNode.fights as WclFightNode[];
     const fights: RaidFight[] = raw
+      .filter(f => typeof f.kill === 'boolean' && (!f.size || f.size > 5))
       .map(f => ({
         id: f.id,
         name: translateBossName(f.name || '알 수 없는 보스'),
@@ -487,7 +488,10 @@ export async function POST(request: Request) {
         row.healthstone = true;
       } else if (
         (lower.includes('치유') && lower.includes('물약')) ||
-        (lower.includes('healing') && lower.includes('potion'))
+        (lower.includes('healing') && lower.includes('potion')) ||
+        (lower.includes('health') && lower.includes('potion')) ||
+        lower.includes('refreshing serum') ||
+        lower.includes('상쾌한 세럼')
       ) {
         if (!row.healingPotion) row.healingPotion = abilityName;
       } else if (lower.includes('augment rune')) {

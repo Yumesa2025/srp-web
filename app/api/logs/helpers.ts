@@ -7,6 +7,7 @@ export interface WclFightNode {
   endTime: number;
   kill?: boolean;
   bossPercentage?: number;
+  size?: number;
 }
 
 export interface WclAbilityNode {
