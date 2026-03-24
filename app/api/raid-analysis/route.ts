@@ -6,7 +6,7 @@ import { fetchWclGraphQL, fetchPagedEvents, WclActorNode, WclAbilityNode, WclEve
 import { BLOODLUST_ABILITY_NAMES } from '@/app/constants/defensiveDefaults';
 import { translateBossName } from '@/app/constants/bossNames';
 import { translatePotionName } from '@/app/constants/potionNames';
-import type { RaidFight, RaidAnalysisResult, EarlyDeath, ConsumableRow, DpsPlayerData, HpsPlayerData, BloodlustEvent, DefensiveUsagePlayer } from '@/app/types/raidAnalysis';
+import type { RaidFight, RaidAnalysisResult, EarlyDeath, ConsumableRow, AllPlayerData, BloodlustEvent, DefensiveUsagePlayer, DefensiveEntry } from '@/app/types/raidAnalysis';
 
 // ── 유틸 ──────────────────────────────────────────────────────
 function secondsToTime(sec: number): string {
@@ -107,7 +107,7 @@ const AnalysisSchema = z.object({
   endTime: z.number(),
   kill: z.boolean(),
   bossPercentage: z.number().nullable(),
-  defensiveSpellNames: z.array(z.string()).default([]),
+  defensiveEntries: z.array(z.object({ id: z.number().int().positive().optional(), name: z.string() })).default([]),
   stepSec: z.number().int().min(1).max(30).default(5),
 });
 
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
   const parsed = AnalysisSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues.map(i => i.message).join(', ') }, { status: 400 });
 
-  const { reportCode: rawCode, fightId, fightName, startTime, endTime, kill, bossPercentage, defensiveSpellNames, stepSec } = parsed.data;
+  const { reportCode: rawCode, fightId, fightName, startTime, endTime, kill, bossPercentage, defensiveEntries, stepSec } = parsed.data;
   const reportCode = extractReportCode(rawCode);
 
   try {
@@ -178,6 +178,19 @@ export async function POST(request: Request) {
     damageEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
     healEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
 
+    // ── defensive 매칭 헬퍼 ────────────────────────────────────
+    const defensiveIdSet = new Set<number>();
+    const defensiveNameSet = new Set<string>();
+    (defensiveEntries as DefensiveEntry[]).forEach(e => {
+      if (e.id) defensiveIdSet.add(e.id);
+      defensiveNameSet.add(e.name.toLowerCase().trim());
+    });
+    const isDefensiveCast = (e: WclEventNode): boolean => {
+      const id = typeof e.abilityGameID === 'number' ? e.abilityGameID : (typeof e.ability?.guid === 'number' ? e.ability.guid : null);
+      if (id !== null && defensiveIdSet.has(id)) return true;
+      return defensiveNameSet.has(getAbilityName(e, abilityMap).toLowerCase().trim());
+    };
+
     // ── 블러드러스트 타이밍 (먼저 계산해야 DPS 블러드구간 계산 가능) ──
     const bloodlusts: BloodlustEvent[] = [];
     const seenBloodlustTimes = new Set<number>();
@@ -196,6 +209,20 @@ export async function POST(request: Request) {
           });
         }
       }
+    });
+
+    // ── 마력주입 (Power Infusion) 수신자별 타이밍 ──────────────
+    const PI_SPELL_ID = 10060;
+    const piTimingMap = new Map<number, number[]>(); // targetActorId → timeSec[]
+    castEvents.forEach(e => {
+      if (!e.timestamp || typeof e.targetID !== 'number') return;
+      if (!fightPlayerIds.has(e.targetID)) return;
+      const abilityId = e.abilityGameID ?? e.ability?.guid;
+      const abilityNameLower = getAbilityName(e, abilityMap).toLowerCase().trim();
+      if (abilityId !== PI_SPELL_ID && abilityNameLower !== 'power infusion') return;
+      const timeSec = toFightSec(e.timestamp, startTime);
+      if (!piTimingMap.has(e.targetID)) piTimingMap.set(e.targetID, []);
+      piTimingMap.get(e.targetID)!.push(timeSec);
     });
 
     // ── 개인별 DPS ─────────────────────────────────────────────
@@ -222,98 +249,79 @@ export async function POST(request: Request) {
       secMap.set(sec, (secMap.get(sec) ?? 0) + amount);
     });
 
-    // 플레이어별 총 힐량 사전 계산 (역할 분류용)
-    const totalHealByPlayer = new Map<number, number>();
-    playerHealBySecond.forEach((secMap, id) => {
-      let total = 0;
-      secMap.forEach(v => total += v);
-      totalHealByPlayer.set(id, total);
-    });
+    // ── 생존기 사용 현황 (allPlayers defensiveCasts를 위해 먼저 계산) ──
+    const defensiveUsageMap = new Map<string, { actorId: number; className?: string; specId?: number; casts: { ability: string; timeSec: number; timeStr: string }[] }>();
+    if (defensiveIdSet.size > 0 || defensiveNameSet.size > 0) {
+      castEvents.forEach(e => {
+        if (!e.timestamp || typeof e.sourceID !== 'number' || !fightPlayerIds.has(e.sourceID)) return;
+        if (!isDefensiveCast(e)) return;
+        const abilityName = getAbilityName(e, abilityMap);
+        const name = actorMap.get(e.sourceID) ?? '';
+        if (!name) return;
+        if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, { actorId: e.sourceID, className: actorClassMap.get(e.sourceID), specId: specIdMap.get(e.sourceID), casts: [] });
+        const timeSec = toFightSec(e.timestamp, startTime);
+        defensiveUsageMap.get(name)!.casts.push({ ability: abilityName, timeSec, timeStr: secondsToTime(timeSec) });
+      });
+    }
 
-    // 힐러 분류: 총힐량 > 총딜량 * 3 이고 avg HPS > 30K
-    const healer_HPS_THRESHOLD = 30_000;
-    const isHealer = (actorId: number): boolean => {
-      const totalDmg = (() => { let s = 0; (playerDamageBySecond.get(actorId) ?? new Map()).forEach(v => s += v); return s; })();
-      const totalHeal = totalHealByPlayer.get(actorId) ?? 0;
-      return totalHeal > totalDmg * 3 && totalHeal / durationSec > healer_HPS_THRESHOLD;
-    };
-
-    // DPS players (힐러 제외, 최소 딜량 1000)
-    const dpsPlayers: DpsPlayerData[] = [];
-    playerDamageBySecond.forEach((secMap, sourceId) => {
-      if (isHealer(sourceId)) return;
-      const name = actorMap.get(sourceId);
+    // ── 전체 플레이어 데이터 (탱/딜/힐 통합) ──────────────────
+    const allPlayers: AllPlayerData[] = [];
+    fightPlayerIds.forEach(actorId => {
+      const name = actorMap.get(actorId);
       if (!name) return;
 
-      let totalDamage = 0;
-      secMap.forEach(v => totalDamage += v);
-      if (totalDamage < 1000) return;
+      const dpsSecMap = playerDamageBySecond.get(actorId) ?? new Map<number, number>();
+      const hpsSecMap = playerHealBySecond.get(actorId) ?? new Map<number, number>();
 
-      const timeline: { sec: number; dps: number }[] = [];
+      let totalDamage = 0;
+      dpsSecMap.forEach(v => { totalDamage += v; });
+      let totalHealing = 0;
+      hpsSecMap.forEach(v => { totalHealing += v; });
+
+      if (totalDamage < 1000 && totalHealing < 10_000) return;
+
+      const dpsTimeline: { sec: number; dps: number }[] = [];
       let maxDps = 0;
       for (let s = 0; s <= durationSec; s += stepSec) {
         let sum = 0;
-        for (let t = s; t < s + stepSec && t <= durationSec; t++) {
-          sum += secMap.get(t) ?? 0;
-        }
+        for (let t = s; t < s + stepSec && t <= durationSec; t++) sum += dpsSecMap.get(t) ?? 0;
         const dps = Math.round(sum / stepSec);
         if (dps > maxDps) maxDps = dps;
-        timeline.push({ sec: s, dps });
+        dpsTimeline.push({ sec: s, dps });
       }
 
-      dpsPlayers.push({
-        name,
-        actorId: sourceId,
-        className: actorClassMap.get(sourceId),
-        specId: specIdMap.get(sourceId),
-        totalDamage,
-        avgDps: Math.round(totalDamage / durationSec),
-        maxDps,
-        bloodlustAvgDps: calcBloodlustAvg(secMap, bloodlusts, durationSec),
-        timeline,
-      });
-    });
-    dpsPlayers.sort((a, b) => b.totalDamage - a.totalDamage);
-
-    // HPS players (힐러만, 최소 힐량)
-    const hpsPlayers: HpsPlayerData[] = [];
-    playerHealBySecond.forEach((secMap, sourceId) => {
-      if (!isHealer(sourceId)) return;
-      const name = actorMap.get(sourceId);
-      if (!name) return;
-
-      let totalHealing = 0;
-      secMap.forEach(v => totalHealing += v);
-      if (totalHealing < 10_000) return;
-
-      const timeline: { sec: number; hps: number }[] = [];
+      const hpsTimeline: { sec: number; hps: number }[] = [];
       let maxHps = 0;
       for (let s = 0; s <= durationSec; s += stepSec) {
         let sum = 0;
-        for (let t = s; t < s + stepSec && t <= durationSec; t++) {
-          sum += secMap.get(t) ?? 0;
-        }
+        for (let t = s; t < s + stepSec && t <= durationSec; t++) sum += hpsSecMap.get(t) ?? 0;
         const hps = Math.round(sum / stepSec);
         if (hps > maxHps) maxHps = hps;
-        timeline.push({ sec: s, hps });
+        hpsTimeline.push({ sec: s, hps });
       }
 
-      hpsPlayers.push({
+      allPlayers.push({
         name,
-        actorId: sourceId,
-        className: actorClassMap.get(sourceId),
-        specId: specIdMap.get(sourceId),
+        actorId,
+        className: actorClassMap.get(actorId),
+        specId: specIdMap.get(actorId),
+        totalDamage,
+        avgDps: Math.round(totalDamage / durationSec),
+        maxDps,
+        bloodlustAvgDps: calcBloodlustAvg(dpsSecMap, bloodlusts, durationSec),
+        dpsTimeline,
         totalHealing,
         avgHps: Math.round(totalHealing / durationSec),
         maxHps,
-        bloodlustAvgHps: calcBloodlustAvg(secMap, bloodlusts, durationSec),
-        timeline,
+        bloodlustAvgHps: calcBloodlustAvg(hpsSecMap, bloodlusts, durationSec),
+        hpsTimeline,
+        defensiveCasts: defensiveUsageMap.get(name)?.casts.map(c => ({ ability: c.ability, timeSec: c.timeSec })) ?? [],
+        piTimings: piTimingMap.get(actorId) ?? [],
       });
     });
-    hpsPlayers.sort((a, b) => b.totalHealing - a.totalHealing);
+    allPlayers.sort((a, b) => b.totalDamage - a.totalDamage);
 
     // ── 죽음 분석 ─────────────────────────────────────────────
-    const defensiveNameSet = new Set(defensiveSpellNames.map(n => n.toLowerCase().trim()));
     const sortedDeaths = deathEvents
       .filter(e => e.type === 'death' && typeof e.timestamp === 'number' && typeof e.targetID === 'number' && playerIds.has(e.targetID!))
       .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
@@ -348,8 +356,7 @@ export async function POST(request: Request) {
           if (!c.timestamp || typeof c.sourceID !== 'number') return false;
           if (c.sourceID !== death.targetID) return false;
           if (c.timestamp < deathTs - 5000 || c.timestamp > deathTs) return false;
-          const name = getAbilityName(c, abilityMap).toLowerCase().trim();
-          return defensiveNameSet.size > 0 ? defensiveNameSet.has(name) : true;
+          return (defensiveIdSet.size > 0 || defensiveNameSet.size > 0) ? isDefensiveCast(c) : true;
         })
         .map(c => getAbilityName(c, abilityMap));
 
@@ -377,10 +384,10 @@ export async function POST(request: Request) {
     });
 
     // ── 소모품 O/X (물약 이름 추적) ───────────────────────────
-    type ConsumableState = { className?: string; specId?: number; dpsPotion: string | null; healthstone: boolean; healingPotion: string | null };
+    type ConsumableState = { className?: string; specId?: number; dpsPotion: string | null; healthstone: boolean; healingPotion: string | null; augmentRune: string | null };
     const consumableMap = new Map<string, ConsumableState & { actorId: number }>();
     const ensurePlayer = (name: string, actorId: number) => {
-      if (!consumableMap.has(name)) consumableMap.set(name, { actorId, className: actorClassMap.get(actorId), specId: specIdMap.get(actorId), dpsPotion: null, healthstone: false, healingPotion: null });
+      if (!consumableMap.has(name)) consumableMap.set(name, { actorId, className: actorClassMap.get(actorId), specId: specIdMap.get(actorId), dpsPotion: null, healthstone: false, healingPotion: null, augmentRune: null });
       return consumableMap.get(name)!;
     };
     // fightPlayerIds: 이 전투에 실제 참여한 플레이어만
@@ -404,6 +411,8 @@ export async function POST(request: Request) {
         (lower.includes('healing') && lower.includes('potion'))
       ) {
         if (!row.healingPotion) row.healingPotion = abilityName;
+      } else if (lower.includes('augment rune')) {
+        if (!row.augmentRune) row.augmentRune = translatePotionName(abilityName);
       } else if (
         lower.includes('물약') || lower.includes('potion') ||
         lower.includes('엘릭서') || lower.includes('elixir')
@@ -413,23 +422,8 @@ export async function POST(request: Request) {
     });
 
     const consumables: ConsumableRow[] = Array.from(consumableMap.entries())
-      .map(([name, flags]) => ({ name, actorId: flags.actorId, className: flags.className, specId: flags.specId, dpsPotion: flags.dpsPotion ? translatePotionName(flags.dpsPotion) : null, healthstone: flags.healthstone, healingPotion: flags.healingPotion ? translatePotionName(flags.healingPotion) : null }))
+      .map(([name, flags]) => ({ name, actorId: flags.actorId, className: flags.className, specId: flags.specId, dpsPotion: flags.dpsPotion ? translatePotionName(flags.dpsPotion) : null, healthstone: flags.healthstone, healingPotion: flags.healingPotion ? translatePotionName(flags.healingPotion) : null, augmentRune: flags.augmentRune }))
       .sort((a, b) => a.name.localeCompare(b.name));
-
-    // ── 생존기 사용 현황 ──────────────────────────────────────
-    const defensiveUsageMap = new Map<string, { actorId: number; className?: string; specId?: number; casts: { ability: string; timeSec: number; timeStr: string }[] }>();
-    if (defensiveNameSet.size > 0) {
-      castEvents.forEach(e => {
-        if (!e.timestamp || typeof e.sourceID !== 'number' || !fightPlayerIds.has(e.sourceID)) return;
-        const abilityName = getAbilityName(e, abilityMap);
-        if (!defensiveNameSet.has(abilityName.toLowerCase().trim())) return;
-        const name = actorMap.get(e.sourceID) ?? '';
-        if (!name) return;
-        if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, { actorId: e.sourceID, className: actorClassMap.get(e.sourceID), specId: specIdMap.get(e.sourceID), casts: [] });
-        const timeSec = toFightSec(e.timestamp, startTime);
-        defensiveUsageMap.get(name)!.casts.push({ ability: abilityName, timeSec, timeStr: secondsToTime(timeSec) });
-      });
-    }
 
     const defensiveUsage: DefensiveUsagePlayer[] = Array.from(defensiveUsageMap.entries())
       .map(([name, { actorId, className, specId, casts }]) => ({ name, actorId, className, specId, casts: casts.sort((a, b) => a.timeSec - b.timeSec) }))
@@ -448,8 +442,7 @@ export async function POST(request: Request) {
       reportCode,
       earlyDeaths,
       consumables,
-      dpsPlayers,
-      hpsPlayers,
+      allPlayers,
       bloodlusts,
       defensiveUsage,
     };

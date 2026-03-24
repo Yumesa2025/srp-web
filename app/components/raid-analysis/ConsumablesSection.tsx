@@ -38,6 +38,7 @@ export default function ConsumablesSection({ consumables, makePlayerUrl }: Props
   const dpsMissing   = consumables.filter(c => !c.dpsPotion).length;
   const stoneMissing = consumables.filter(c => !c.healthstone).length;
   const healMissing  = consumables.filter(c => !c.healingPotion).length;
+  const runeMissing  = consumables.filter(c => !c.augmentRune).length;
 
   return (
     <div className="bg-gray-800/60 rounded-xl border border-yellow-500/20 overflow-hidden">
@@ -55,6 +56,7 @@ export default function ConsumablesSection({ consumables, makePlayerUrl }: Props
           <span>❌ 공격물약 <span className="text-red-400 font-bold">{dpsMissing}</span>명</span>
           <span>❌ 생명석 <span className="text-red-400 font-bold">{stoneMissing}</span>명</span>
           <span>❌ 치유물약 <span className="text-red-400 font-bold">{healMissing}</span>명</span>
+          <span>❌ 증강의 룬 <span className="text-red-400 font-bold">{runeMissing}</span>명</span>
         </div>
       </div>
 
@@ -67,11 +69,12 @@ export default function ConsumablesSection({ consumables, makePlayerUrl }: Props
                 <th className="text-center px-4 py-3 font-semibold">공격물약</th>
                 <th className="text-center px-4 py-3 font-semibold">생명석</th>
                 <th className="text-center px-4 py-3 font-semibold">치유물약</th>
+                <th className="text-center px-4 py-3 font-semibold">증강의 룬</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800">
               {consumables.map(row => {
-                const allOk = row.dpsPotion && row.healthstone && row.healingPotion;
+                const allOk = row.dpsPotion && row.healthstone && row.healingPotion && row.augmentRune;
                 return (
                   <tr key={row.name} className={`transition-colors hover:bg-gray-800/40 ${allOk ? '' : 'bg-red-950/10'}`}>
                     <td className="px-5 py-3">
@@ -91,6 +94,15 @@ export default function ConsumablesSection({ consumables, makePlayerUrl }: Props
                     <td className="px-4 py-3 text-center"><StatusCell value={row.dpsPotion} /></td>
                     <td className="px-4 py-3 text-center"><StatusCell value={row.healthstone} /></td>
                     <td className="px-4 py-3 text-center"><StatusCell value={row.healingPotion} /></td>
+                    <td className="px-4 py-3 text-center">
+                      {row.augmentRune ? (
+                        <span className="px-2 py-1 bg-yellow-900/40 border border-yellow-700/40 text-yellow-300 text-xs rounded-md font-medium whitespace-nowrap">
+                          {row.augmentRune}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-black bg-red-900/40 text-red-400">X</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

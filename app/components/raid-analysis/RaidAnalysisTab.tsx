@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { RaidFight, RaidAnalysisResult } from '@/app/types/raidAnalysis';
+import type { RaidFight, RaidAnalysisResult, DefensiveEntry } from '@/app/types/raidAnalysis';
 import { getDefensiveSettings } from '@/app/actions/defensiveSettings';
 import DeathAnalysisSection from './DeathAnalysisSection';
 import ConsumablesSection from './ConsumablesSection';
@@ -31,7 +31,7 @@ export default function RaidAnalysisTab() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError]           = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [defensiveSettings, setDefensiveSettings] = useState<Record<string, string[]> | null>(null);
+  const [defensiveSettings, setDefensiveSettings] = useState<Record<string, DefensiveEntry[]> | null>(null);
 
   // 전투 목록 불러오기
   const loadFights = useCallback(async (overrideUrl?: string) => {
@@ -72,7 +72,7 @@ export default function RaidAnalysisTab() {
         settings = await getDefensiveSettings();
         setDefensiveSettings(settings);
       }
-      const defensiveSpellNames = Object.values(settings).flat();
+      const defensiveEntries = Object.values(settings).flat();
 
       const res = await fetch('/api/raid-analysis', {
         method: 'POST',
@@ -85,7 +85,7 @@ export default function RaidAnalysisTab() {
           endTime: fight.endTime,
           kill: fight.kill,
           bossPercentage: fight.bossPercentage,
-          defensiveSpellNames,
+          defensiveEntries,
           stepSec: 5,
         }),
       });
@@ -248,7 +248,7 @@ export default function RaidAnalysisTab() {
               <>
                 <DeathAnalysisSection deaths={analysis.earlyDeaths} makePlayerUrl={makePlayerUrl} />
                 <ConsumablesSection consumables={analysis.consumables} makePlayerUrl={makePlayerUrl} />
-                <DpsGraphSection players={analysis.dpsPlayers} hpsPlayers={analysis.hpsPlayers} bloodlusts={analysis.bloodlusts} durationSec={analysis.fight.durationSec} makePlayerUrl={makePlayerUrl} />
+                <DpsGraphSection allPlayers={analysis.allPlayers} bloodlusts={analysis.bloodlusts} durationSec={analysis.fight.durationSec} makePlayerUrl={makePlayerUrl} />
                 <DefensiveUsageSection players={analysis.defensiveUsage} makePlayerUrl={makePlayerUrl} />
               </>
             );
@@ -260,7 +260,7 @@ export default function RaidAnalysisTab() {
       {showSettings && (
         <DefensiveSettingsModal
           onClose={() => setShowSettings(false)}
-          onSaved={newSettings => {
+          onSaved={(newSettings: Record<string, DefensiveEntry[]>) => {
             setDefensiveSettings(newSettings);
             setShowSettings(false);
           }}

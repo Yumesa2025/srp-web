@@ -1,3 +1,8 @@
+export interface DefensiveEntry {
+  id?: number;    // spell ID for exact matching
+  name: string;   // display name
+}
+
 export interface RaidFight {
   id: number;
   name: string;
@@ -28,12 +33,13 @@ export interface ConsumableRow {
   actorId: number;
   className?: string;
   specId?: number;
-  dpsPotion: string | null;       // 사용한 공격물약 이름 (미사용 시 null)
+  dpsPotion: string | null;
   healthstone: boolean;
-  healingPotion: string | null;   // 사용한 치유물약 이름 (미사용 시 null)
+  healingPotion: string | null;
+  augmentRune: string | null;
 }
 
-export interface DpsPlayerData {
+export interface AllPlayerData {
   name: string;
   actorId: number;
   className?: string;
@@ -41,20 +47,15 @@ export interface DpsPlayerData {
   totalDamage: number;
   avgDps: number;
   maxDps: number;
-  bloodlustAvgDps: number | null;  // 블러드러스트 구간 평균 DPS
-  timeline: { sec: number; dps: number }[];
-}
-
-export interface HpsPlayerData {
-  name: string;
-  actorId: number;
-  className?: string;
-  specId?: number;
+  bloodlustAvgDps: number | null;
+  dpsTimeline: { sec: number; dps: number }[];
   totalHealing: number;
   avgHps: number;
   maxHps: number;
   bloodlustAvgHps: number | null;
-  timeline: { sec: number; hps: number }[];
+  hpsTimeline: { sec: number; hps: number }[];
+  defensiveCasts: { ability: string; timeSec: number }[];
+  piTimings: number[];  // Power Infusion received timestamps
 }
 
 export interface BloodlustEvent {
@@ -83,8 +84,7 @@ export interface RaidAnalysisResult {
   reportCode: string;
   earlyDeaths: EarlyDeath[];
   consumables: ConsumableRow[];
-  dpsPlayers: DpsPlayerData[];
-  hpsPlayers: HpsPlayerData[];
+  allPlayers: AllPlayerData[];
   bloodlusts: BloodlustEvent[];
   defensiveUsage: DefensiveUsagePlayer[];
 }

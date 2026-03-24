@@ -21,6 +21,21 @@ const POTION_NAME_MAP: Record<string, string> = {
   // 생명석
   "Healthstone": "생명석",
   "Create Healthstone": "생명석 생성",
+
+  // 추가 공격 물약
+  "Silvermoon Health Potion": "실버문 치유 물약",
+  "Lightfused Mana Potion": "빛이 융합된 마나 물약",
+  "Refreshing Serum": "상쾌한 세럼",
+  "Amani Extract": "아마니 추출물",
+  "Void-Shrouded Tincture": "공허로 뒤덮인 팅크",
+  "Light's Potential": "빛의 잠재력",
+  "Potion of Recklessness": "무모함의 물약",
+  "Potion of Zealotry": "광신도의 물약",
+  "Draught of Rampant Abandon": "무분별한 방치 묘약",
+
+  // 증강의 룬
+  "Thalassian Augment Rune": "탈라시안 증강의 룬",
+  "Eternal Sunwell Augment Rune": "영원한 태양샘의 증강의 룬",
 };
 
 /** 알려진 영어 물약 이름이면 한글로 변환, 이미 한글이거나 매핑 없으면 원문 반환 */
