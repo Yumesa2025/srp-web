@@ -10,8 +10,8 @@ interface MainTabsProps {
 const tabs: { id: MainTab; label: string; activeClass: string; disabled?: boolean }[] = [
   { id: "ROSTER",           label: "파티원 명단",          activeClass: "bg-blue-600/90 text-white border-blue-400" },
   { id: "RAID_MARKET",      label: "공대 거래",             activeClass: "bg-amber-600/90 text-white border-amber-400" },
+  { id: "RAID_AI_ANALYSIS", label: "공대 분석",             activeClass: "bg-purple-600/90 text-white border-purple-400" },
   { id: "TACTIC_EDITOR",   label: "전술 타임라인 에디터", activeClass: "bg-green-600/90 text-white border-green-400",  disabled: true },
-  { id: "RAID_AI_ANALYSIS", label: "공대 분석",              activeClass: "bg-purple-600/90 text-white border-purple-400" },
 ];
 
 export default function MainTabs({ activeTab, onChange }: MainTabsProps) {

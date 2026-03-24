@@ -4,7 +4,8 @@ import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 import { getWclToken } from '@/app/lib/tokenCache';
 import { fetchWclGraphQL, fetchPagedEvents, WclActorNode, WclAbilityNode, WclEventNode, WclFightNode } from '@/app/api/logs/helpers';
 import { BLOODLUST_ABILITY_NAMES } from '@/app/constants/defensiveDefaults';
-import type { RaidFight, RaidAnalysisResult, EarlyDeath, ConsumableRow, DpsPlayerData, BloodlustEvent, DefensiveUsagePlayer } from '@/app/types/raidAnalysis';
+import { translateBossName } from '@/app/constants/bossNames';
+import type { RaidFight, RaidAnalysisResult, EarlyDeath, ConsumableRow, DpsPlayerData, HpsPlayerData, BloodlustEvent, DefensiveUsagePlayer } from '@/app/types/raidAnalysis';
 
 // ── 유틸 ──────────────────────────────────────────────────────
 function secondsToTime(sec: number): string {
@@ -19,14 +20,35 @@ function toFightSec(ts: number, start: number): number {
 
 function getAbilityName(event: WclEventNode, abilityMap: Map<number, string>): string {
   const id = event.abilityGameID ?? event.ability?.guid;
-  if (typeof id === 'number' && abilityMap.has(id)) return abilityMap.get(id)!;
-  return event.ability?.name ?? '알 수 없는 기술';
+  if (typeof id === 'number' && id !== 0 && abilityMap.has(id)) return abilityMap.get(id)!;
+  const name = event.ability?.name;
+  if (!name || name === 'Unknown Ability' || name === 'Unknown' || id === 0) return '알 수 없는 피해';
+  return name;
 }
 
 function extractReportCode(raw: string): string {
   const urlMatch = raw.trim().match(/reports\/([A-Za-z0-9]+)/i);
   if (urlMatch?.[1]) return urlMatch[1];
   return raw.trim().split(/[/?#\s]/)[0].replace(/[^A-Za-z0-9]/g, '');
+}
+
+// 블러드러스트 구간 평균 DPS/HPS 계산
+function calcBloodlustAvg(
+  secMap: Map<number, number>,
+  bloodlusts: BloodlustEvent[],
+  durationSec: number,
+): number | null {
+  if (bloodlusts.length === 0) return null;
+  let totalAmt = 0;
+  let totalSecs = 0;
+  bloodlusts.forEach(bl => {
+    const endSec = Math.min(bl.timeSec + 40, durationSec);
+    for (let s = bl.timeSec; s < endSec; s++) {
+      totalAmt += secMap.get(s) ?? 0;
+      totalSecs++;
+    }
+  });
+  return totalSecs > 0 ? Math.round(totalAmt / totalSecs) : null;
 }
 
 // ── GET: 전투 목록 ─────────────────────────────────────────────
@@ -56,12 +78,11 @@ export async function GET(request: Request) {
     if (data?.errors?.length) throw new Error(data.errors[0].message);
 
     const raw = (data?.data?.reportData?.report?.fights ?? []) as WclFightNode[];
-    // 보스 전투만 (bossPercentage가 숫자인 것)
     const fights: RaidFight[] = raw
       .filter(f => typeof f.bossPercentage === 'number')
       .map(f => ({
         id: f.id,
-        name: f.name || '알 수 없는 보스',
+        name: translateBossName(f.name || '알 수 없는 보스'),
         durationSec: Math.floor((f.endTime - f.startTime) / 1000),
         kill: Boolean(f.kill),
         bossPercentage: f.bossPercentage ?? null,
@@ -134,115 +155,35 @@ export async function POST(request: Request) {
     const { startTime, endTime } = selectedFight;
     const durationSec = Math.max(1, Math.floor((endTime - startTime) / 1000));
 
-    // 2. 이벤트 병렬 조회
-    const [deathEvents, castEvents, damageEvents] = await Promise.all([
+    // 2. 이벤트 병렬 조회 (힐링 추가)
+    const [deathEvents, castEvents, damageEvents, healEvents] = await Promise.all([
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Deaths', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Casts', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'DamageDone', hostilityType: 'Friendlies', startTime, endTime }),
+      fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Healing', hostilityType: 'Friendlies', startTime, endTime }),
     ]);
 
-    // ── 죽음 분석: 먼저 죽은 3명 ──────────────────────────────
-    const sortedDeaths = deathEvents
-      .filter(e => e.type === 'death' && typeof e.timestamp === 'number' && typeof e.targetID === 'number' && playerIds.has(e.targetID!))
-      .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
-
-    const allDeathTimes = sortedDeaths.map(e => toFightSec(e.timestamp!, startTime));
-
-    const defensiveNameSet = new Set(defensiveSpellNames.map(n => n.toLowerCase().trim()));
-
-    const earlyDeaths: EarlyDeath[] = sortedDeaths.slice(0, 3).map((death, idx) => {
-      const timeSec = toFightSec(death.timestamp!, startTime);
-
-      // 집단 죽음 감지: 이 죽음 ±10초 내에 5명 이상 사망
-      const windowCount = allDeathTimes.filter(t => Math.abs(t - timeSec) <= 10).length;
-      const isMassDeath = idx > 0 && windowCount >= 5;
-
-      if (isMassDeath) {
-        return {
-          rank: idx + 1,
-          playerName: actorMap.get(death.targetID!) ?? `플레이어#${death.targetID}`,
-          timeSec,
-          timeStr: secondsToTime(timeSec),
-          cause: getAbilityName(death, abilityMap),
-          hpBefore: null,
-          defensivesUsed: [],
-          isSkipped: true,
-          skipReason: `집단 죽음 (${windowCount}명, ±10초 이내) — 리트라이 가능성`,
-        };
-      }
-
-      // 죽기 전 5초 이내 생존기 사용 여부
-      const deathTs = death.timestamp!;
-      const defensivesUsed = castEvents
-        .filter(c => {
-          if (!c.timestamp || typeof c.sourceID !== 'number') return false;
-          if (c.sourceID !== death.targetID) return false;
-          if (c.timestamp < deathTs - 5000 || c.timestamp > deathTs) return false;
-          const name = getAbilityName(c, abilityMap).toLowerCase().trim();
-          return defensiveNameSet.size > 0 ? defensiveNameSet.has(name) : true;
-        })
-        .map(c => getAbilityName(c, abilityMap));
-
-      // HP before death
-      let hpBefore: number | null = null;
-      if (death.targetResources) {
-        const hpRes = death.targetResources.find(r => r.type === 0);
-        if (hpRes && hpRes.max) hpBefore = Math.round((hpRes.amount ?? 0) / hpRes.max * 100);
-      } else if (death.hitPoints !== undefined && death.maxHitPoints) {
-        hpBefore = Math.round((death.hitPoints / death.maxHitPoints) * 100);
-      }
-
-      return {
-        rank: idx + 1,
-        playerName: actorMap.get(death.targetID!) ?? `플레이어#${death.targetID}`,
-        timeSec,
-        timeStr: secondsToTime(timeSec),
-        cause: getAbilityName(death, abilityMap),
-        hpBefore,
-        defensivesUsed: Array.from(new Set(defensivesUsed)),
-        isSkipped: false,
-      };
-    });
-
-    // ── 소모품 O/X ────────────────────────────────────────────
-    const consumableMap = new Map<string, { dpsPotion: boolean; healthstone: boolean; healingPotion: boolean }>();
-    const ensurePlayer = (name: string) => {
-      if (!consumableMap.has(name)) consumableMap.set(name, { dpsPotion: false, healthstone: false, healingPotion: false });
-      return consumableMap.get(name)!;
-    };
-    playerIds.forEach(id => {
-      const name = actorMap.get(id);
-      if (name) ensurePlayer(name);
-    });
-
+    // ── 블러드러스트 타이밍 (먼저 계산해야 DPS 블러드구간 계산 가능) ──
+    const bloodlusts: BloodlustEvent[] = [];
+    const seenBloodlustTimes = new Set<number>();
     castEvents.forEach(e => {
-      if (!e.timestamp || typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
-      const name = actorMap.get(e.sourceID) ?? '';
-      if (!name) return;
-      const abilityName = getAbilityName(e, abilityMap).toLowerCase();
-      const row = ensurePlayer(name);
-
-      if (abilityName.includes('생명석') || abilityName.includes('healthstone')) {
-        row.healthstone = true;
-      } else if (
-        (abilityName.includes('치유') && abilityName.includes('물약')) ||
-        (abilityName.includes('healing') && abilityName.includes('potion'))
-      ) {
-        row.healingPotion = true;
-      } else if (
-        abilityName.includes('물약') || abilityName.includes('potion') ||
-        abilityName.includes('엘릭서') || abilityName.includes('elixir')
-      ) {
-        row.dpsPotion = true;
+      if (!e.timestamp) return;
+      const name = getAbilityName(e, abilityMap).toLowerCase().trim();
+      if (BLOODLUST_ABILITY_NAMES.has(name)) {
+        const timeSec = toFightSec(e.timestamp, startTime);
+        // 같은 초에 중복 블러드러스트 제거
+        if (!seenBloodlustTimes.has(timeSec)) {
+          seenBloodlustTimes.add(timeSec);
+          bloodlusts.push({
+            ability: getAbilityName(e, abilityMap),
+            timeSec,
+            timeStr: secondsToTime(timeSec),
+          });
+        }
       }
     });
 
-    const consumables: ConsumableRow[] = Array.from(consumableMap.entries())
-      .map(([name, flags]) => ({ name, ...flags }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    // ── 개인별 DPS 그래프 ─────────────────────────────────────
-    // 플레이어별 초당 딜량 누적
+    // ── 개인별 DPS ─────────────────────────────────────────────
     const playerDamageBySecond = new Map<number, Map<number, number>>();
     damageEvents.forEach(e => {
       if (!e.timestamp || typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
@@ -254,14 +195,44 @@ export async function POST(request: Request) {
       secMap.set(sec, (secMap.get(sec) ?? 0) + amount);
     });
 
+    // ── 개인별 HPS ─────────────────────────────────────────────
+    const playerHealBySecond = new Map<number, Map<number, number>>();
+    healEvents.forEach(e => {
+      if (!e.timestamp || typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
+      const sec = toFightSec(e.timestamp, startTime);
+      const amount = e.amount ?? 0;
+      if (amount <= 0) return;
+      if (!playerHealBySecond.has(e.sourceID)) playerHealBySecond.set(e.sourceID, new Map());
+      const secMap = playerHealBySecond.get(e.sourceID)!;
+      secMap.set(sec, (secMap.get(sec) ?? 0) + amount);
+    });
+
+    // 플레이어별 총 힐량 사전 계산 (역할 분류용)
+    const totalHealByPlayer = new Map<number, number>();
+    playerHealBySecond.forEach((secMap, id) => {
+      let total = 0;
+      secMap.forEach(v => total += v);
+      totalHealByPlayer.set(id, total);
+    });
+
+    // 힐러 분류: 총힐량 > 총딜량 * 3 이고 avg HPS > 30K
+    const healer_HPS_THRESHOLD = 30_000;
+    const isHealer = (actorId: number): boolean => {
+      const totalDmg = (() => { let s = 0; (playerDamageBySecond.get(actorId) ?? new Map()).forEach(v => s += v); return s; })();
+      const totalHeal = totalHealByPlayer.get(actorId) ?? 0;
+      return totalHeal > totalDmg * 3 && totalHeal / durationSec > healer_HPS_THRESHOLD;
+    };
+
+    // DPS players (힐러 제외, 최소 딜량 1000)
     const dpsPlayers: DpsPlayerData[] = [];
     playerDamageBySecond.forEach((secMap, sourceId) => {
+      if (isHealer(sourceId)) return;
       const name = actorMap.get(sourceId);
       if (!name) return;
 
       let totalDamage = 0;
       secMap.forEach(v => totalDamage += v);
-      if (totalDamage < 1000) return; // 딜러가 아닌 플레이어 제외
+      if (totalDamage < 1000) return;
 
       const timeline: { sec: number; dps: number }[] = [];
       let maxDps = 0;
@@ -277,31 +248,152 @@ export async function POST(request: Request) {
 
       dpsPlayers.push({
         name,
+        actorId: sourceId,
         totalDamage,
         avgDps: Math.round(totalDamage / durationSec),
         maxDps,
+        bloodlustAvgDps: calcBloodlustAvg(secMap, bloodlusts, durationSec),
         timeline,
       });
     });
     dpsPlayers.sort((a, b) => b.totalDamage - a.totalDamage);
 
-    // ── 블러드러스트 타이밍 ──────────────────────────────────
-    const bloodlusts: BloodlustEvent[] = [];
-    castEvents.forEach(e => {
-      if (!e.timestamp) return;
-      const name = getAbilityName(e, abilityMap).toLowerCase().trim();
-      if (BLOODLUST_ABILITY_NAMES.has(name)) {
-        const timeSec = toFightSec(e.timestamp, startTime);
-        bloodlusts.push({
-          ability: getAbilityName(e, abilityMap),
+    // HPS players (힐러만, 최소 힐량)
+    const hpsPlayers: HpsPlayerData[] = [];
+    playerHealBySecond.forEach((secMap, sourceId) => {
+      if (!isHealer(sourceId)) return;
+      const name = actorMap.get(sourceId);
+      if (!name) return;
+
+      let totalHealing = 0;
+      secMap.forEach(v => totalHealing += v);
+      if (totalHealing < 10_000) return;
+
+      const timeline: { sec: number; hps: number }[] = [];
+      let maxHps = 0;
+      for (let s = 0; s <= durationSec; s += stepSec) {
+        let sum = 0;
+        for (let t = s; t < s + stepSec && t <= durationSec; t++) {
+          sum += secMap.get(t) ?? 0;
+        }
+        const hps = Math.round(sum / stepSec);
+        if (hps > maxHps) maxHps = hps;
+        timeline.push({ sec: s, hps });
+      }
+
+      hpsPlayers.push({
+        name,
+        actorId: sourceId,
+        totalHealing,
+        avgHps: Math.round(totalHealing / durationSec),
+        maxHps,
+        bloodlustAvgHps: calcBloodlustAvg(secMap, bloodlusts, durationSec),
+        timeline,
+      });
+    });
+    hpsPlayers.sort((a, b) => b.totalHealing - a.totalHealing);
+
+    // ── 죽음 분석 ─────────────────────────────────────────────
+    const defensiveNameSet = new Set(defensiveSpellNames.map(n => n.toLowerCase().trim()));
+    const sortedDeaths = deathEvents
+      .filter(e => e.type === 'death' && typeof e.timestamp === 'number' && typeof e.targetID === 'number' && playerIds.has(e.targetID!))
+      .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+
+    const allDeathTimes = sortedDeaths.map(e => toFightSec(e.timestamp!, startTime));
+
+    const earlyDeaths: EarlyDeath[] = sortedDeaths.slice(0, 3).map((death, idx) => {
+      const timeSec = toFightSec(death.timestamp!, startTime);
+      const windowCount = allDeathTimes.filter(t => Math.abs(t - timeSec) <= 10).length;
+      const isMassDeath = idx > 0 && windowCount >= 5;
+
+      if (isMassDeath) {
+        return {
+          rank: idx + 1,
+          playerName: actorMap.get(death.targetID!) ?? `플레이어#${death.targetID}`,
+          actorId: death.targetID!,
           timeSec,
           timeStr: secondsToTime(timeSec),
-        });
+          cause: getAbilityName(death, abilityMap),
+          hpBefore: null,
+          defensivesUsed: [],
+          isSkipped: true,
+          skipReason: `집단 죽음 (${windowCount}명, ±10초 이내) — 리트라이 가능성`,
+        };
+      }
+
+      const deathTs = death.timestamp!;
+      const defensivesUsed = castEvents
+        .filter(c => {
+          if (!c.timestamp || typeof c.sourceID !== 'number') return false;
+          if (c.sourceID !== death.targetID) return false;
+          if (c.timestamp < deathTs - 5000 || c.timestamp > deathTs) return false;
+          const name = getAbilityName(c, abilityMap).toLowerCase().trim();
+          return defensiveNameSet.size > 0 ? defensiveNameSet.has(name) : true;
+        })
+        .map(c => getAbilityName(c, abilityMap));
+
+      let hpBefore: number | null = null;
+      if (death.targetResources) {
+        const hpRes = death.targetResources.find(r => r.type === 0);
+        if (hpRes && hpRes.max) hpBefore = Math.round((hpRes.amount ?? 0) / hpRes.max * 100);
+      } else if (death.hitPoints !== undefined && death.maxHitPoints) {
+        hpBefore = Math.round((death.hitPoints / death.maxHitPoints) * 100);
+      }
+
+      return {
+        rank: idx + 1,
+        playerName: actorMap.get(death.targetID!) ?? `플레이어#${death.targetID}`,
+        actorId: death.targetID!,
+        timeSec,
+        timeStr: secondsToTime(timeSec),
+        cause: getAbilityName(death, abilityMap),
+        hpBefore,
+        defensivesUsed: Array.from(new Set(defensivesUsed)),
+        isSkipped: false,
+      };
+    });
+
+    // ── 소모품 O/X (물약 이름 추적) ───────────────────────────
+    type ConsumableState = { dpsPotion: string | null; healthstone: boolean; healingPotion: string | null };
+    const consumableMap = new Map<string, ConsumableState & { actorId: number }>();
+    const ensurePlayer = (name: string, actorId: number) => {
+      if (!consumableMap.has(name)) consumableMap.set(name, { actorId, dpsPotion: null, healthstone: false, healingPotion: null });
+      return consumableMap.get(name)!;
+    };
+    playerIds.forEach(id => {
+      const name = actorMap.get(id);
+      if (name) ensurePlayer(name, id);
+    });
+
+    castEvents.forEach(e => {
+      if (!e.timestamp || typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
+      const pName = actorMap.get(e.sourceID) ?? '';
+      if (!pName) return;
+      const abilityName = getAbilityName(e, abilityMap);
+      const lower = abilityName.toLowerCase();
+      const row = ensurePlayer(pName, e.sourceID);
+
+      if (lower.includes('생명석') || lower.includes('healthstone')) {
+        row.healthstone = true;
+      } else if (
+        (lower.includes('치유') && lower.includes('물약')) ||
+        (lower.includes('healing') && lower.includes('potion'))
+      ) {
+        if (!row.healingPotion) row.healingPotion = abilityName;
+      } else if (
+        lower.includes('물약') || lower.includes('potion') ||
+        lower.includes('엘릭서') || lower.includes('elixir')
+      ) {
+        if (!row.dpsPotion) row.dpsPotion = abilityName;
       }
     });
 
-    // ── 생존기 사용 횟수 (유저 설정 기반) ────────────────────
-    const defensiveUsageMap = new Map<string, { ability: string; timeSec: number; timeStr: string }[]>();
+    const consumables: ConsumableRow[] = Array.from(consumableMap.entries())
+      .map(([name, flags]) => ({ name, actorId: flags.actorId, dpsPotion: flags.dpsPotion, healthstone: flags.healthstone, healingPotion: flags.healingPotion }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    // ── 생존기 사용 현황 ──────────────────────────────────────
+    const defensiveUsageMap = new Map<string, { actorId: number; casts: { ability: string; timeSec: number; timeStr: string }[] }>();
     if (defensiveNameSet.size > 0) {
       castEvents.forEach(e => {
         if (!e.timestamp || typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
@@ -309,21 +401,21 @@ export async function POST(request: Request) {
         if (!defensiveNameSet.has(abilityName.toLowerCase().trim())) return;
         const name = actorMap.get(e.sourceID) ?? '';
         if (!name) return;
-        if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, []);
+        if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, { actorId: e.sourceID, casts: [] });
         const timeSec = toFightSec(e.timestamp, startTime);
-        defensiveUsageMap.get(name)!.push({ ability: abilityName, timeSec, timeStr: secondsToTime(timeSec) });
+        defensiveUsageMap.get(name)!.casts.push({ ability: abilityName, timeSec, timeStr: secondsToTime(timeSec) });
       });
     }
 
     const defensiveUsage: DefensiveUsagePlayer[] = Array.from(defensiveUsageMap.entries())
-      .map(([name, casts]) => ({ name, casts: casts.sort((a, b) => a.timeSec - b.timeSec) }))
+      .map(([name, { actorId, casts }]) => ({ name, actorId, casts: casts.sort((a, b) => a.timeSec - b.timeSec) }))
       .sort((a, b) => b.casts.length - a.casts.length);
 
     // ── 결과 반환 ────────────────────────────────────────────
     const result: RaidAnalysisResult = {
       fight: {
         id: selectedFight.id,
-        name: selectedFight.name ?? '알 수 없는 보스',
+        name: translateBossName(selectedFight.name ?? '알 수 없는 보스'),
         durationSec,
         kill: Boolean(selectedFight.kill),
         bossPercentage: selectedFight.bossPercentage ?? null,
@@ -333,6 +425,7 @@ export async function POST(request: Request) {
       earlyDeaths,
       consumables,
       dpsPlayers,
+      hpsPlayers,
       bloodlusts,
       defensiveUsage,
     };

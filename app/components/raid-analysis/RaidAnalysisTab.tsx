@@ -231,10 +231,18 @@ export default function RaidAnalysisTab() {
             </div>
           </div>
 
-          <DeathAnalysisSection deaths={analysis.earlyDeaths} />
-          <ConsumablesSection consumables={analysis.consumables} />
-          <DpsGraphSection players={analysis.dpsPlayers} bloodlusts={analysis.bloodlusts} durationSec={analysis.fight.durationSec} />
-          <DefensiveUsageSection players={analysis.defensiveUsage} />
+          {(() => {
+            const makePlayerUrl = (actorId: number) =>
+              `https://www.warcraftlogs.com/reports/${analysis.reportCode}#fight=${analysis.fight.id}&source=${actorId}`;
+            return (
+              <>
+                <DeathAnalysisSection deaths={analysis.earlyDeaths} makePlayerUrl={makePlayerUrl} />
+                <ConsumablesSection consumables={analysis.consumables} makePlayerUrl={makePlayerUrl} />
+                <DpsGraphSection players={analysis.dpsPlayers} hpsPlayers={analysis.hpsPlayers} bloodlusts={analysis.bloodlusts} durationSec={analysis.fight.durationSec} makePlayerUrl={makePlayerUrl} />
+                <DefensiveUsageSection players={analysis.defensiveUsage} makePlayerUrl={makePlayerUrl} />
+              </>
+            );
+          })()}
         </div>
       )}
 
