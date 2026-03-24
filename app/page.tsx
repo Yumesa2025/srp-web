@@ -8,6 +8,7 @@ import MainTabs from "@/app/components/MainTabs";
 import RaidMarketTab from "@/app/components/market/RaidMarketTab";
 import ErrorBoundary from "@/app/components/ErrorBoundary";
 import RosterTab from "@/app/components/roster/RosterTab";
+import RaidAnalysisTab from "@/app/components/raid-analysis/RaidAnalysisTab";
 
 import { guessRole } from "@/app/lib/raidUtils";
 import { useAnalytics } from "@/app/hooks/useAnalytics";
@@ -217,6 +218,12 @@ export default function Home() {
         {activeTab === "RAID_MARKET" && (
           <ErrorBoundary>
             <RaidMarketTab />
+          </ErrorBoundary>
+        )}
+
+        {activeTab === "RAID_AI_ANALYSIS" && (
+          <ErrorBoundary>
+            <RaidAnalysisTab />
           </ErrorBoundary>
         )}
       </div>
