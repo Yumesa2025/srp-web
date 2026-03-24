@@ -192,17 +192,23 @@ export async function POST(request: Request) {
 
     const durationSec = Math.max(1, Math.floor((endTime - startTime) / 1000));
 
-    // 2. 이벤트 병렬 조회 (CombatantInfo 제거 — WCL rate limit 절약)
-    const [deathEvents, castEvents, damageEvents, healEvents] = await Promise.all([
+    // 2. 이벤트 병렬 조회
+    const [deathEvents, castEvents, damageEvents, healEvents, combatantInfoEvents] = await Promise.all([
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Deaths', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Casts', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'DamageDone', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Healing', hostilityType: 'Friendlies', startTime, endTime }),
+      fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'CombatantInfo', startTime, endTime }).catch(() => []),
     ]);
 
-    // specIdMap은 비워둠 (specID 아이콘 미표시) — CombatantInfo 요청 제거
+    // combatantInfo → specIdMap (actorId → specId) + 실제 전투 참여자 집합
     const specIdMap = new Map<number, number>();
     const fightPlayerIds = new Set<number>();
+    combatantInfoEvents.forEach(e => {
+      if (typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
+      fightPlayerIds.add(e.sourceID);
+      if (typeof e.specID === 'number') specIdMap.set(e.sourceID, e.specID);
+    });
     damageEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
     healEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
 
