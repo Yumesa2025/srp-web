@@ -125,7 +125,10 @@ export async function GET(request: Request) {
       },
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : '전투 목록을 불러오지 못했습니다.';
+    const raw = e instanceof Error ? e.message : '전투 목록을 불러오지 못했습니다.';
+    const msg = raw.includes('429')
+      ? 'WCL API 요청 한도 초과 (429). 잠시 후 다시 시도해주세요. (무료 API 키는 분당 요청 수 제한이 있습니다)'
+      : raw;
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
@@ -189,25 +192,17 @@ export async function POST(request: Request) {
 
     const durationSec = Math.max(1, Math.floor((endTime - startTime) / 1000));
 
-    // 2. 이벤트 병렬 조회
+    // 2. 이벤트 병렬 조회 (CombatantInfo 제거 — WCL rate limit 절약)
     const [deathEvents, castEvents, damageEvents, healEvents] = await Promise.all([
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Deaths', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Casts', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'DamageDone', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Healing', hostilityType: 'Friendlies', startTime, endTime }),
     ]);
-    // combatantInfo는 실패해도 무시 (specID 없으면 아이콘만 미표시)
-    const combatantInfoEvents = await fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'CombatantInfo', startTime, endTime }).catch(() => []);
 
-    // combatantInfo → specIdMap (actorId → specId) + 실제 전투 참여자 집합
+    // specIdMap은 비워둠 (specID 아이콘 미표시) — CombatantInfo 요청 제거
     const specIdMap = new Map<number, number>();
     const fightPlayerIds = new Set<number>();
-    combatantInfoEvents.forEach(e => {
-      if (typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
-      fightPlayerIds.add(e.sourceID);
-      if (typeof e.specID === 'number') specIdMap.set(e.sourceID, e.specID);
-    });
-    // combatantInfo 누락 보완: 실제 이벤트에 등장한 플레이어 추가
     damageEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
     healEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
 
@@ -482,7 +477,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ result });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : '분석 중 오류가 발생했습니다.';
+    const raw = e instanceof Error ? e.message : '분석 중 오류가 발생했습니다.';
+    const msg = raw.includes('429')
+      ? 'WCL API 요청 한도 초과 (429). 잠시 후 다시 시도해주세요. (무료 API 키는 분당 요청 수 제한이 있습니다)'
+      : raw;
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
