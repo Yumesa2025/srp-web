@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import type { DpsPlayerData, HpsPlayerData, BloodlustEvent } from '@/app/types/raidAnalysis';
+import { getClassColor } from '@/app/constants/classColors';
 
 interface Props {
   players: DpsPlayerData[];
@@ -27,6 +28,7 @@ function secToTime(sec: number) {
 function PlayerCard({
   name,
   actorId,
+  className,
   avgLabel,
   avgValue,
   bloodlustAvg,
@@ -41,6 +43,7 @@ function PlayerCard({
 }: {
   name: string;
   actorId: number;
+  className?: string;
   avgLabel: string;
   avgValue: number;
   bloodlustAvg: number | null;
@@ -54,60 +57,64 @@ function PlayerCard({
   makePlayerUrl: (actorId: number) => string;
 }) {
   const lastSec = timeline[timeline.length - 1]?.sec ?? 9999;
+  const classColor = getClassColor(className);
+
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-700 p-4 hover:border-opacity-50 transition-colors">
+    <div className="bg-gray-900 rounded-xl border border-gray-700 p-5 hover:border-gray-600 transition-colors">
       <div className="flex items-center justify-between mb-3">
         <a
           href={makePlayerUrl(actorId)}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-white font-bold text-sm hover:text-cyan-400 hover:underline transition-colors truncate"
+          style={{ color: classColor }}
+          className="font-bold text-lg hover:underline transition-colors truncate"
         >
           {name} ↗
         </a>
-        <div className="text-right shrink-0 ml-2">
-          <p style={{ color: lineColor }} className="font-black font-mono text-base">{formatK(avgValue)}</p>
-          <p className="text-gray-600 text-xs">평균 {avgLabel}</p>
+        <div className="text-right shrink-0 ml-3">
+          <p style={{ color: lineColor }} className="font-black font-mono text-xl">{formatK(avgValue)}</p>
+          <p className="text-gray-500 text-sm">평균 {avgLabel}</p>
         </div>
       </div>
-      <div className="flex gap-4 mb-2 text-xs text-gray-500 flex-wrap">
-        <span>{totalLabel} <span className="text-gray-300 font-semibold">{formatK(totalValue)}</span></span>
-        <span>최고 <span className="text-gray-300 font-semibold">{formatK(maxValue)}</span></span>
+      <div className="flex gap-5 mb-3 text-sm text-gray-500 flex-wrap">
+        <span>{totalLabel} <span className="text-gray-200 font-semibold">{formatK(totalValue)}</span></span>
+        <span>최고 <span className="text-gray-200 font-semibold">{formatK(maxValue)}</span></span>
         {bloodlustAvg !== null && (
-          <span className="text-red-400 font-semibold">
-            🩸 블러드 <span className="text-red-300">{formatK(bloodlustAvg)}</span>
+          <span className="font-semibold">
+            🩸 블러드 <span className="text-red-300 font-bold">{formatK(bloodlustAvg)}</span>
           </span>
         )}
       </div>
 
-      <ResponsiveContainer width="100%" height={130}>
-        <LineChart data={timeline} margin={{ top: 2, right: 4, bottom: 0, left: 0 }}>
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={timeline} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
           {bloodlusts.map((bl, i) => (
             <ReferenceArea
               key={i}
               x1={bl.timeSec}
               x2={Math.min(bl.timeSec + 40, lastSec)}
-              fill="rgba(239,68,68,0.12)"
-              stroke="rgba(239,68,68,0.3)"
-              strokeWidth={1}
+              fill="rgba(239,68,68,0.18)"
+              stroke="rgba(239,68,68,0.6)"
+              strokeWidth={2}
+              label={{ value: '🔴', position: 'insideTop', fontSize: 12 }}
             />
           ))}
           <XAxis
             dataKey="sec"
             tickFormatter={secToTime}
-            tick={{ fill: '#6b7280', fontSize: 9 }}
+            tick={{ fill: '#9ca3af', fontSize: 11 }}
             interval="preserveStartEnd"
-            minTickGap={40}
+            minTickGap={50}
           />
           <YAxis
             tickFormatter={formatK}
-            tick={{ fill: '#6b7280', fontSize: 9 }}
-            width={36}
+            tick={{ fill: '#9ca3af', fontSize: 11 }}
+            width={44}
           />
           <Tooltip
             formatter={(v: number | undefined) => [`${formatK(v ?? 0)} ${avgLabel}`, '']}
             labelFormatter={(label: unknown) => secToTime(Number(label))}
-            contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: 8, fontSize: 13 }}
             itemStyle={{ color: lineColor }}
             labelStyle={{ color: '#9ca3af' }}
           />
@@ -115,9 +122,9 @@ function PlayerCard({
             type="monotone"
             dataKey={timelineKey}
             stroke={lineColor}
-            strokeWidth={1.5}
+            strokeWidth={2}
             dot={false}
-            activeDot={{ r: 3, fill: lineColor }}
+            activeDot={{ r: 4, fill: lineColor }}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -135,7 +142,7 @@ export default function DpsGraphSection({ players, hpsPlayers, bloodlusts, durat
 
   if (!hasDps && !hasHps) {
     return (
-      <div className="p-6 bg-gray-800/60 rounded-xl border border-gray-700 text-center text-gray-500 text-sm">
+      <div className="p-6 bg-gray-800/60 rounded-xl border border-gray-700 text-center text-gray-500">
         딜/힐 데이터가 없습니다.
       </div>
     );
@@ -145,46 +152,47 @@ export default function DpsGraphSection({ players, hpsPlayers, bloodlusts, durat
     <div className="bg-gray-800/60 rounded-xl border border-purple-500/20 overflow-hidden">
       <div className="px-5 py-4 border-b border-gray-700/60 flex items-start justify-between">
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={() => setCollapsed(v => !v)} className="text-gray-400 hover:text-white text-sm">
+          <button onClick={() => setCollapsed(v => !v)} className="text-gray-400 hover:text-white">
             {collapsed ? '▶' : '▼'}
           </button>
           <div>
-            <h3 className="text-purple-300 font-bold text-base">📈 플레이어 그래프</h3>
-            <p className="text-xs text-gray-500 mt-0.5">시간별 순간 DPS/HPS</p>
+            <h3 className="text-purple-300 font-bold text-lg">📈 플레이어 그래프</h3>
+            <p className="text-sm text-gray-500 mt-0.5">시간별 순간 DPS/HPS · 🔴 블러드러스트 구간</p>
           </div>
-          <div className="flex gap-1 ml-2">
+          <div className="flex gap-1.5 ml-2">
             <button
               onClick={() => setActiveTab('dps')}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${activeTab === 'dps' ? 'bg-purple-700 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}
+              className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${activeTab === 'dps' ? 'bg-purple-700 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}
             >
               딜러 ({players.length})
             </button>
             <button
               onClick={() => setActiveTab('hps')}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${activeTab === 'hps' ? 'bg-emerald-700 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}
+              className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${activeTab === 'hps' ? 'bg-emerald-700 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}
             >
               힐러 ({hpsPlayers.length})
             </button>
           </div>
         </div>
         {bloodlusts.length > 0 && (
-          <div className="text-xs text-gray-500 text-right shrink-0">
-            <p className="text-red-400 font-semibold mb-0.5">🔴 블러드러스트</p>
+          <div className="text-sm text-gray-500 text-right shrink-0">
+            <p className="text-red-400 font-semibold mb-1">🔴 블러드러스트</p>
             {bloodlusts.map((bl, i) => (
-              <p key={i}>{bl.ability} <span className="text-gray-400">{bl.timeStr}</span></p>
+              <p key={i} className="text-sm">{bl.ability} <span className="text-gray-400">{bl.timeStr}</span></p>
             ))}
           </div>
         )}
       </div>
 
       {!collapsed && (
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-5">
           {activeTab === 'dps' && (
             hasDps ? players.map(player => (
               <PlayerCard
                 key={player.name}
                 name={player.name}
                 actorId={player.actorId}
+                className={player.className}
                 avgLabel="DPS"
                 avgValue={player.avgDps}
                 bloodlustAvg={player.bloodlustAvgDps}
@@ -198,7 +206,7 @@ export default function DpsGraphSection({ players, hpsPlayers, bloodlusts, durat
                 makePlayerUrl={makePlayerUrl}
               />
             )) : (
-              <div className="text-center text-gray-500 text-sm py-8">딜러 데이터가 없습니다.</div>
+              <div className="text-center text-gray-500 py-10">딜러 데이터가 없습니다.</div>
             )
           )}
           {activeTab === 'hps' && (
@@ -207,6 +215,7 @@ export default function DpsGraphSection({ players, hpsPlayers, bloodlusts, durat
                 key={player.name}
                 name={player.name}
                 actorId={player.actorId}
+                className={player.className}
                 avgLabel="HPS"
                 avgValue={player.avgHps}
                 bloodlustAvg={player.bloodlustAvgHps}
@@ -220,7 +229,7 @@ export default function DpsGraphSection({ players, hpsPlayers, bloodlusts, durat
                 makePlayerUrl={makePlayerUrl}
               />
             )) : (
-              <div className="text-center text-gray-500 text-sm py-8">힐러 데이터가 없습니다.</div>
+              <div className="text-center text-gray-500 py-10">힐러 데이터가 없습니다.</div>
             )
           )}
         </div>

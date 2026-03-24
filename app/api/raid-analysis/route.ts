@@ -5,6 +5,7 @@ import { getWclToken } from '@/app/lib/tokenCache';
 import { fetchWclGraphQL, fetchPagedEvents, WclActorNode, WclAbilityNode, WclEventNode, WclFightNode } from '@/app/api/logs/helpers';
 import { BLOODLUST_ABILITY_NAMES } from '@/app/constants/defensiveDefaults';
 import { translateBossName } from '@/app/constants/bossNames';
+import { translatePotionName } from '@/app/constants/potionNames';
 import type { RaidFight, RaidAnalysisResult, EarlyDeath, ConsumableRow, DpsPlayerData, HpsPlayerData, BloodlustEvent, DefensiveUsagePlayer } from '@/app/types/raidAnalysis';
 
 // ── 유틸 ──────────────────────────────────────────────────────
@@ -150,6 +151,8 @@ export async function POST(request: Request) {
     abilities.forEach(a => abilityMap.set(a.gameID, a.name));
     const actorMap = new Map<number, string>();
     actors.forEach(a => actorMap.set(a.id, a.name));
+    const actorClassMap = new Map<number, string>();
+    actors.forEach(a => { if (a.type === 'Player' && a.subType) actorClassMap.set(a.id, a.subType); });
     const playerIds = new Set(actors.filter(a => a.type === 'Player').map(a => a.id));
 
     const { startTime, endTime } = selectedFight;
@@ -249,6 +252,7 @@ export async function POST(request: Request) {
       dpsPlayers.push({
         name,
         actorId: sourceId,
+        className: actorClassMap.get(sourceId),
         totalDamage,
         avgDps: Math.round(totalDamage / durationSec),
         maxDps,
@@ -284,6 +288,7 @@ export async function POST(request: Request) {
       hpsPlayers.push({
         name,
         actorId: sourceId,
+        className: actorClassMap.get(sourceId),
         totalHealing,
         avgHps: Math.round(totalHealing / durationSec),
         maxHps,
@@ -311,6 +316,7 @@ export async function POST(request: Request) {
           rank: idx + 1,
           playerName: actorMap.get(death.targetID!) ?? `플레이어#${death.targetID}`,
           actorId: death.targetID!,
+          className: actorClassMap.get(death.targetID!),
           timeSec,
           timeStr: secondsToTime(timeSec),
           cause: getAbilityName(death, abilityMap),
@@ -344,6 +350,7 @@ export async function POST(request: Request) {
         rank: idx + 1,
         playerName: actorMap.get(death.targetID!) ?? `플레이어#${death.targetID}`,
         actorId: death.targetID!,
+        className: actorClassMap.get(death.targetID!),
         timeSec,
         timeStr: secondsToTime(timeSec),
         cause: getAbilityName(death, abilityMap),
@@ -354,10 +361,10 @@ export async function POST(request: Request) {
     });
 
     // ── 소모품 O/X (물약 이름 추적) ───────────────────────────
-    type ConsumableState = { dpsPotion: string | null; healthstone: boolean; healingPotion: string | null };
+    type ConsumableState = { className?: string; dpsPotion: string | null; healthstone: boolean; healingPotion: string | null };
     const consumableMap = new Map<string, ConsumableState & { actorId: number }>();
     const ensurePlayer = (name: string, actorId: number) => {
-      if (!consumableMap.has(name)) consumableMap.set(name, { actorId, dpsPotion: null, healthstone: false, healingPotion: null });
+      if (!consumableMap.has(name)) consumableMap.set(name, { actorId, className: actorClassMap.get(actorId), dpsPotion: null, healthstone: false, healingPotion: null });
       return consumableMap.get(name)!;
     };
     playerIds.forEach(id => {
@@ -389,11 +396,11 @@ export async function POST(request: Request) {
     });
 
     const consumables: ConsumableRow[] = Array.from(consumableMap.entries())
-      .map(([name, flags]) => ({ name, actorId: flags.actorId, dpsPotion: flags.dpsPotion, healthstone: flags.healthstone, healingPotion: flags.healingPotion }))
+      .map(([name, flags]) => ({ name, actorId: flags.actorId, className: flags.className, dpsPotion: flags.dpsPotion ? translatePotionName(flags.dpsPotion) : null, healthstone: flags.healthstone, healingPotion: flags.healingPotion ? translatePotionName(flags.healingPotion) : null }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     // ── 생존기 사용 현황 ──────────────────────────────────────
-    const defensiveUsageMap = new Map<string, { actorId: number; casts: { ability: string; timeSec: number; timeStr: string }[] }>();
+    const defensiveUsageMap = new Map<string, { actorId: number; className?: string; casts: { ability: string; timeSec: number; timeStr: string }[] }>();
     if (defensiveNameSet.size > 0) {
       castEvents.forEach(e => {
         if (!e.timestamp || typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
@@ -401,14 +408,14 @@ export async function POST(request: Request) {
         if (!defensiveNameSet.has(abilityName.toLowerCase().trim())) return;
         const name = actorMap.get(e.sourceID) ?? '';
         if (!name) return;
-        if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, { actorId: e.sourceID, casts: [] });
+        if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, { actorId: e.sourceID, className: actorClassMap.get(e.sourceID), casts: [] });
         const timeSec = toFightSec(e.timestamp, startTime);
         defensiveUsageMap.get(name)!.casts.push({ ability: abilityName, timeSec, timeStr: secondsToTime(timeSec) });
       });
     }
 
     const defensiveUsage: DefensiveUsagePlayer[] = Array.from(defensiveUsageMap.entries())
-      .map(([name, { actorId, casts }]) => ({ name, actorId, casts: casts.sort((a, b) => a.timeSec - b.timeSec) }))
+      .map(([name, { actorId, className, casts }]) => ({ name, actorId, className, casts: casts.sort((a, b) => a.timeSec - b.timeSec) }))
       .sort((a, b) => b.casts.length - a.casts.length);
 
     // ── 결과 반환 ────────────────────────────────────────────

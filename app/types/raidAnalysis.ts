@@ -12,6 +12,7 @@ export interface EarlyDeath {
   rank: number;
   playerName: string;
   actorId: number;
+  className?: string;
   timeSec: number;
   timeStr: string;
   cause: string;
@@ -24,6 +25,7 @@ export interface EarlyDeath {
 export interface ConsumableRow {
   name: string;
   actorId: number;
+  className?: string;
   dpsPotion: string | null;       // 사용한 공격물약 이름 (미사용 시 null)
   healthstone: boolean;
   healingPotion: string | null;   // 사용한 치유물약 이름 (미사용 시 null)
@@ -32,6 +34,7 @@ export interface ConsumableRow {
 export interface DpsPlayerData {
   name: string;
   actorId: number;
+  className?: string;
   totalDamage: number;
   avgDps: number;
   maxDps: number;
@@ -42,6 +45,7 @@ export interface DpsPlayerData {
 export interface HpsPlayerData {
   name: string;
   actorId: number;
+  className?: string;
   totalHealing: number;
   avgHps: number;
   maxHps: number;
@@ -58,6 +62,7 @@ export interface BloodlustEvent {
 export interface DefensiveUsagePlayer {
   name: string;
   actorId: number;
+  className?: string;
   casts: { ability: string; timeSec: number; timeStr: string }[];
 }
 
