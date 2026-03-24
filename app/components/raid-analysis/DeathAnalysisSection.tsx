@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { EarlyDeath } from '@/app/types/raidAnalysis';
 import { getClassColor } from '@/app/constants/classColors';
+import { getSpecIconUrl } from '@/app/constants/specIcons';
 
 interface Props {
   deaths: EarlyDeath[];
@@ -48,17 +49,20 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                     }`}>
                       {death.rank}
                     </span>
-                    <div>
-                      <a
-                        href={makePlayerUrl(death.actorId)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: getClassColor(death.className) }}
-                        className="font-bold text-base hover:underline transition-colors leading-tight block"
-                      >
-                        {death.playerName}
-                      </a>
-                      <p className="text-gray-500 text-sm">{death.timeStr}</p>
+                    <div className="flex items-start gap-1.5 min-w-0">
+                      {getSpecIconUrl(death.specId) && <img src={getSpecIconUrl(death.specId)!} alt="" className="w-5 h-5 rounded shrink-0 mt-0.5" />}
+                      <div className="min-w-0">
+                        <a
+                          href={makePlayerUrl(death.actorId)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: getClassColor(death.className) }}
+                          className="font-bold text-base hover:underline transition-colors leading-tight block truncate"
+                        >
+                          {death.playerName}
+                        </a>
+                        <p className="text-gray-500 text-sm">{death.timeStr}</p>
+                      </div>
                     </div>
                   </div>
                   {!death.isSkipped && death.hpBefore !== null && (

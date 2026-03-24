@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { DefensiveUsagePlayer } from '@/app/types/raidAnalysis';
 import { getClassColor } from '@/app/constants/classColors';
+import { getSpecIconUrl } from '@/app/constants/specIcons';
 
 interface Props {
   players: DefensiveUsagePlayer[];
@@ -34,15 +35,18 @@ export default function DefensiveUsageSection({ players, makePlayerUrl }: Props)
             {players.map(player => (
               <div key={player.name} className="bg-gray-900 rounded-xl border border-gray-700 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <a
-                    href={makePlayerUrl(player.actorId)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: getClassColor(player.className) }}
-                    className="font-bold text-base hover:underline transition-colors"
-                  >
-                    {player.name}
-                  </a>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {getSpecIconUrl(player.specId) && <img src={getSpecIconUrl(player.specId)!} alt="" className="w-5 h-5 rounded shrink-0" />}
+                    <a
+                      href={makePlayerUrl(player.actorId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: getClassColor(player.className) }}
+                      className="font-bold text-base hover:underline transition-colors truncate"
+                    >
+                      {player.name}
+                    </a>
+                  </div>
                   <span className="text-cyan-400 font-black text-lg">
                     {player.casts.length}<span className="text-sm text-gray-500 ml-1">회</span>
                   </span>

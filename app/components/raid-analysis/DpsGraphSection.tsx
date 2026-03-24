@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import type { DpsPlayerData, HpsPlayerData, BloodlustEvent } from '@/app/types/raidAnalysis';
 import { getClassColor } from '@/app/constants/classColors';
+import { getSpecIconUrl } from '@/app/constants/specIcons';
 
 interface Props {
   players: DpsPlayerData[];
@@ -29,6 +30,7 @@ function PlayerCard({
   name,
   actorId,
   className,
+  specId,
   avgLabel,
   avgValue,
   bloodlustAvg,
@@ -44,6 +46,7 @@ function PlayerCard({
   name: string;
   actorId: number;
   className?: string;
+  specId?: number;
   avgLabel: string;
   avgValue: number;
   bloodlustAvg: number | null;
@@ -58,19 +61,23 @@ function PlayerCard({
 }) {
   const lastSec = timeline[timeline.length - 1]?.sec ?? 9999;
   const classColor = getClassColor(className);
+  const iconUrl = getSpecIconUrl(specId);
 
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-700 p-5 hover:border-gray-600 transition-colors">
       <div className="flex items-center justify-between mb-3">
-        <a
-          href={makePlayerUrl(actorId)}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: classColor }}
-          className="font-bold text-lg hover:underline transition-colors truncate"
-        >
-          {name} ↗
-        </a>
+        <div className="flex items-center gap-2 min-w-0">
+          {iconUrl && <img src={iconUrl} alt="" className="w-6 h-6 rounded shrink-0" />}
+          <a
+            href={makePlayerUrl(actorId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: classColor }}
+            className="font-bold text-lg hover:underline transition-colors truncate"
+          >
+            {name} ↗
+          </a>
+        </div>
         <div className="text-right shrink-0 ml-3">
           <p style={{ color: lineColor }} className="font-black font-mono text-xl">{formatK(avgValue)}</p>
           <p className="text-gray-500 text-sm">평균 {avgLabel}</p>
@@ -101,6 +108,8 @@ function PlayerCard({
           ))}
           <XAxis
             dataKey="sec"
+            type="number"
+            domain={[0, lastSec]}
             tickFormatter={secToTime}
             tick={{ fill: '#9ca3af', fontSize: 11 }}
             interval="preserveStartEnd"
@@ -193,6 +202,7 @@ export default function DpsGraphSection({ players, hpsPlayers, bloodlusts, durat
                 name={player.name}
                 actorId={player.actorId}
                 className={player.className}
+                specId={player.specId}
                 avgLabel="DPS"
                 avgValue={player.avgDps}
                 bloodlustAvg={player.bloodlustAvgDps}
@@ -216,6 +226,7 @@ export default function DpsGraphSection({ players, hpsPlayers, bloodlusts, durat
                 name={player.name}
                 actorId={player.actorId}
                 className={player.className}
+                specId={player.specId}
                 avgLabel="HPS"
                 avgValue={player.avgHps}
                 bloodlustAvg={player.bloodlustAvgHps}

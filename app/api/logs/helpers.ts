@@ -32,6 +32,7 @@ export interface WclEventNode {
   amount?: number;
   unmitigatedAmount?: number;
   absorbed?: number;
+  specID?: number;
   hitPoints?: number;
   maxHitPoints?: number;
   targetResources?: Array<{ type?: number; amount?: number; max?: number }>;
@@ -56,7 +57,7 @@ interface WclGraphQlPayload {
   };
 }
 
-export type WclDataType = "Deaths" | "Casts" | "DamageDone" | "Healing";
+export type WclDataType = "Deaths" | "Casts" | "DamageDone" | "Healing" | "CombatantInfo";
 export type WclHostilityType = "Enemies" | "Friendlies";
 
 export interface DeathSummary {

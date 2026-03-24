@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { ConsumableRow } from '@/app/types/raidAnalysis';
 import { getClassColor } from '@/app/constants/classColors';
+import { getSpecIconUrl } from '@/app/constants/specIcons';
 
 interface Props {
   consumables: ConsumableRow[];
@@ -74,15 +75,18 @@ export default function ConsumablesSection({ consumables, makePlayerUrl }: Props
                 return (
                   <tr key={row.name} className={`transition-colors hover:bg-gray-800/40 ${allOk ? '' : 'bg-red-950/10'}`}>
                     <td className="px-5 py-3">
-                      <a
-                        href={makePlayerUrl(row.actorId)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: getClassColor(row.className) }}
-                        className="font-semibold text-base hover:underline transition-colors"
-                      >
-                        {row.name}
-                      </a>
+                      <div className="flex items-center gap-2">
+                        {getSpecIconUrl(row.specId) && <img src={getSpecIconUrl(row.specId)!} alt="" className="w-5 h-5 rounded shrink-0" />}
+                        <a
+                          href={makePlayerUrl(row.actorId)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: getClassColor(row.className) }}
+                          className="font-semibold text-base hover:underline transition-colors"
+                        >
+                          {row.name}
+                        </a>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center"><StatusCell value={row.dpsPotion} /></td>
                     <td className="px-4 py-3 text-center"><StatusCell value={row.healthstone} /></td>

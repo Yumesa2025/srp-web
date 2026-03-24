@@ -157,13 +157,26 @@ export async function POST(request: Request) {
 
     const durationSec = Math.max(1, Math.floor((endTime - startTime) / 1000));
 
-    // 2. 이벤트 병렬 조회 (힐링 추가)
-    const [deathEvents, castEvents, damageEvents, healEvents] = await Promise.all([
+    // 2. 이벤트 병렬 조회 (combatantInfo 추가 → specID + 실제 참여자 필터링)
+    const [deathEvents, castEvents, damageEvents, healEvents, combatantInfoEvents] = await Promise.all([
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Deaths', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Casts', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'DamageDone', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Healing', hostilityType: 'Friendlies', startTime, endTime }),
+      fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'CombatantInfo', startTime, endTime }),
     ]);
+
+    // combatantInfo → specIdMap (actorId → specId) + 실제 전투 참여자 집합
+    const specIdMap = new Map<number, number>();
+    const fightPlayerIds = new Set<number>();
+    combatantInfoEvents.forEach(e => {
+      if (typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
+      fightPlayerIds.add(e.sourceID);
+      if (typeof e.specID === 'number') specIdMap.set(e.sourceID, e.specID);
+    });
+    // combatantInfo 누락 보완: 실제 이벤트에 등장한 플레이어 추가
+    damageEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
+    healEvents.forEach(e => { if (typeof e.sourceID === 'number' && playerIds.has(e.sourceID)) fightPlayerIds.add(e.sourceID); });
 
     // ── 블러드러스트 타이밍 (먼저 계산해야 DPS 블러드구간 계산 가능) ──
     const bloodlusts: BloodlustEvent[] = [];
@@ -252,6 +265,7 @@ export async function POST(request: Request) {
         name,
         actorId: sourceId,
         className: actorClassMap.get(sourceId),
+        specId: specIdMap.get(sourceId),
         totalDamage,
         avgDps: Math.round(totalDamage / durationSec),
         maxDps,
@@ -288,6 +302,7 @@ export async function POST(request: Request) {
         name,
         actorId: sourceId,
         className: actorClassMap.get(sourceId),
+        specId: specIdMap.get(sourceId),
         totalHealing,
         avgHps: Math.round(totalHealing / durationSec),
         maxHps,
@@ -316,6 +331,7 @@ export async function POST(request: Request) {
           playerName: actorMap.get(death.targetID!) ?? `플레이어#${death.targetID}`,
           actorId: death.targetID!,
           className: actorClassMap.get(death.targetID!),
+          specId: specIdMap.get(death.targetID!),
           timeSec,
           timeStr: secondsToTime(timeSec),
           cause: getAbilityName(death, abilityMap),
@@ -350,6 +366,7 @@ export async function POST(request: Request) {
         playerName: actorMap.get(death.targetID!) ?? `플레이어#${death.targetID}`,
         actorId: death.targetID!,
         className: actorClassMap.get(death.targetID!),
+        specId: specIdMap.get(death.targetID!),
         timeSec,
         timeStr: secondsToTime(timeSec),
         cause: getAbilityName(death, abilityMap),
@@ -360,19 +377,20 @@ export async function POST(request: Request) {
     });
 
     // ── 소모품 O/X (물약 이름 추적) ───────────────────────────
-    type ConsumableState = { className?: string; dpsPotion: string | null; healthstone: boolean; healingPotion: string | null };
+    type ConsumableState = { className?: string; specId?: number; dpsPotion: string | null; healthstone: boolean; healingPotion: string | null };
     const consumableMap = new Map<string, ConsumableState & { actorId: number }>();
     const ensurePlayer = (name: string, actorId: number) => {
-      if (!consumableMap.has(name)) consumableMap.set(name, { actorId, className: actorClassMap.get(actorId), dpsPotion: null, healthstone: false, healingPotion: null });
+      if (!consumableMap.has(name)) consumableMap.set(name, { actorId, className: actorClassMap.get(actorId), specId: specIdMap.get(actorId), dpsPotion: null, healthstone: false, healingPotion: null });
       return consumableMap.get(name)!;
     };
-    playerIds.forEach(id => {
+    // fightPlayerIds: 이 전투에 실제 참여한 플레이어만
+    fightPlayerIds.forEach(id => {
       const name = actorMap.get(id);
       if (name) ensurePlayer(name, id);
     });
 
     castEvents.forEach(e => {
-      if (!e.timestamp || typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
+      if (!e.timestamp || typeof e.sourceID !== 'number' || !fightPlayerIds.has(e.sourceID)) return;
       const pName = actorMap.get(e.sourceID) ?? '';
       if (!pName) return;
       const abilityName = getAbilityName(e, abilityMap);
@@ -395,26 +413,26 @@ export async function POST(request: Request) {
     });
 
     const consumables: ConsumableRow[] = Array.from(consumableMap.entries())
-      .map(([name, flags]) => ({ name, actorId: flags.actorId, className: flags.className, dpsPotion: flags.dpsPotion ? translatePotionName(flags.dpsPotion) : null, healthstone: flags.healthstone, healingPotion: flags.healingPotion ? translatePotionName(flags.healingPotion) : null }))
+      .map(([name, flags]) => ({ name, actorId: flags.actorId, className: flags.className, specId: flags.specId, dpsPotion: flags.dpsPotion ? translatePotionName(flags.dpsPotion) : null, healthstone: flags.healthstone, healingPotion: flags.healingPotion ? translatePotionName(flags.healingPotion) : null }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     // ── 생존기 사용 현황 ──────────────────────────────────────
-    const defensiveUsageMap = new Map<string, { actorId: number; className?: string; casts: { ability: string; timeSec: number; timeStr: string }[] }>();
+    const defensiveUsageMap = new Map<string, { actorId: number; className?: string; specId?: number; casts: { ability: string; timeSec: number; timeStr: string }[] }>();
     if (defensiveNameSet.size > 0) {
       castEvents.forEach(e => {
-        if (!e.timestamp || typeof e.sourceID !== 'number' || !playerIds.has(e.sourceID)) return;
+        if (!e.timestamp || typeof e.sourceID !== 'number' || !fightPlayerIds.has(e.sourceID)) return;
         const abilityName = getAbilityName(e, abilityMap);
         if (!defensiveNameSet.has(abilityName.toLowerCase().trim())) return;
         const name = actorMap.get(e.sourceID) ?? '';
         if (!name) return;
-        if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, { actorId: e.sourceID, className: actorClassMap.get(e.sourceID), casts: [] });
+        if (!defensiveUsageMap.has(name)) defensiveUsageMap.set(name, { actorId: e.sourceID, className: actorClassMap.get(e.sourceID), specId: specIdMap.get(e.sourceID), casts: [] });
         const timeSec = toFightSec(e.timestamp, startTime);
         defensiveUsageMap.get(name)!.casts.push({ ability: abilityName, timeSec, timeStr: secondsToTime(timeSec) });
       });
     }
 
     const defensiveUsage: DefensiveUsagePlayer[] = Array.from(defensiveUsageMap.entries())
-      .map(([name, { actorId, className, casts }]) => ({ name, actorId, className, casts: casts.sort((a, b) => a.timeSec - b.timeSec) }))
+      .map(([name, { actorId, className, specId, casts }]) => ({ name, actorId, className, specId, casts: casts.sort((a, b) => a.timeSec - b.timeSec) }))
       .sort((a, b) => b.casts.length - a.casts.length);
 
     // ── 결과 반환 ────────────────────────────────────────────
