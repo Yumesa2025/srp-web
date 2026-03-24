@@ -27,6 +27,10 @@ export interface EarlyDeath {
   defensivesUsed: string[];
   isSkipped: boolean;
   skipReason?: string;
+  incomingDamage?: {
+    totalDamage: number;
+    topHits: { ability: string; amount: number; iconUrl?: string }[];
+  };
 }
 
 export interface ConsumableRow {

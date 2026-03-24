@@ -88,6 +88,22 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                       </span>
                     </div>
 
+                    {/* 직전 5초 받은 피해 */}
+                    {death.incomingDamage && (
+                      <div>
+                        <p className="text-gray-500 text-xs mb-1">
+                          직전 5초 받은 피해 <span className="text-orange-400 font-bold">{(death.incomingDamage.totalDamage / 1000).toFixed(0)}K</span>
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {death.incomingDamage.topHits.map(h => (
+                            <span key={h.ability} className="px-2 py-0.5 bg-orange-900/30 border border-orange-800/40 text-orange-300 text-xs rounded-md whitespace-nowrap">
+                              {h.ability} <span className="font-bold">{(h.amount / 1000).toFixed(0)}K</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* 생존기 */}
                     <div>
                       <p className="text-gray-500 text-xs mb-1">생존기</p>

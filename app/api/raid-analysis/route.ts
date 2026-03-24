@@ -196,12 +196,13 @@ export async function POST(request: Request) {
     const durationSec = Math.max(1, Math.floor((endTime - startTime) / 1000));
 
     // 2. 이벤트 병렬 조회
-    const [deathEvents, castEvents, damageEvents, healEvents, combatantInfoEvents] = await Promise.all([
+    const [deathEvents, castEvents, damageEvents, healEvents, combatantInfoEvents, incomingDamageEvents] = await Promise.all([
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Deaths', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Casts', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'DamageDone', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Healing', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'CombatantInfo', startTime, endTime }).catch(() => []),
+      fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'DamageDone', hostilityType: 'Enemies', startTime, endTime }),
     ]);
 
     // combatantInfo → specIdMap (actorId → specId) + 실제 전투 참여자 집합
@@ -447,6 +448,27 @@ export async function POST(request: Request) {
         hpBefore = Math.round((death.hitPoints / death.maxHitPoints) * 100);
       }
 
+      // 사망 직전 5초 받은 피해 계산
+      const preDeathHits = incomingDamageEvents.filter(e =>
+        typeof e.targetID === 'number' && e.targetID === death.targetID &&
+        typeof e.timestamp === 'number' && e.timestamp >= deathTs - 5000 && e.timestamp <= deathTs &&
+        (e.amount ?? 0) > 0
+      );
+      const totalIncoming = preDeathHits.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+      // 스킬별 합산
+      const hitsByAbility = new Map<number, { name: string; total: number }>();
+      preDeathHits.forEach(e => {
+        const id = e.abilityGameID ?? e.ability?.guid;
+        if (typeof id !== 'number') return;
+        const name = abilityMap.get(id) ?? e.ability?.name ?? `스킬#${id}`;
+        const prev = hitsByAbility.get(id) ?? { name, total: 0 };
+        hitsByAbility.set(id, { name, total: prev.total + (e.amount ?? 0) });
+      });
+      const topHits = Array.from(hitsByAbility.values())
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 3)
+        .map(h => ({ ability: h.name, amount: h.total }));
+
       return {
         rank: idx + 1,
         playerName: actorMap.get(death.targetID!) ?? `플레이어#${death.targetID}`,
@@ -460,6 +482,7 @@ export async function POST(request: Request) {
         hpBefore,
         defensivesUsed: Array.from(new Set(defensivesUsed)),
         isSkipped: false,
+        incomingDamage: totalIncoming > 0 ? { totalDamage: totalIncoming, topHits } : undefined,
       };
     });
 
