@@ -69,7 +69,7 @@ export async function GET(request: Request) {
         reportData {
           report(code: $code) {
             fights {
-              id name startTime endTime kill bossPercentage encounterID
+              id name startTime endTime kill bossPercentage
             }
           }
         }
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
 
     const raw = (data?.data?.reportData?.report?.fights ?? []) as WclFightNode[];
     const fights: RaidFight[] = raw
-      .filter(f => (f.encounterID ?? 0) > 0)
+      .filter(f => typeof f.kill === 'boolean')
       .map(f => ({
         id: f.id,
         name: translateBossName(f.name || '알 수 없는 보스'),
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         endTime: f.endTime,
       }));
 
-    return NextResponse.json({ fights, _debug: { raw: raw.slice(0, 3), report: data?.data?.reportData?.report ? 'exists' : 'null', errors: data?.errors ?? null } });
+    return NextResponse.json({ fights });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '전투 목록을 불러오지 못했습니다.';
     return NextResponse.json({ error: msg }, { status: 500 });
