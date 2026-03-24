@@ -1,5 +1,5 @@
 export type RoleType = "UNASSIGNED" | "TANK" | "MELEE" | "RANGED" | "HEALER";
-export type MainTab = "ROSTER" | "TACTIC_EDITOR" | "RAID_AI_ANALYSIS" | "RAID_MARKET";
+export type MainTab = "ROSTER" | "HELP" | "RAID_AI_ANALYSIS" | "RAID_MARKET";
 
 export interface DefensiveState {
   name: string;
