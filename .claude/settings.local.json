@@ -17,7 +17,8 @@
       "WebFetch(domain:raidplan.io)",
       "Bash(git push:*)",
       "Bash(xargs grep:*)",
-      "Bash(grep -r \"fightId\\\\|fight\\\\.id\" /c/project/srp-web/app/components --include=*.tsx)"
+      "Bash(grep -r \"fightId\\\\|fight\\\\.id\" /c/project/srp-web/app/components --include=*.tsx)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
