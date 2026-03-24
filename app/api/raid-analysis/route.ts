@@ -157,14 +157,15 @@ export async function POST(request: Request) {
 
     const durationSec = Math.max(1, Math.floor((endTime - startTime) / 1000));
 
-    // 2. 이벤트 병렬 조회 (combatantInfo 추가 → specID + 실제 참여자 필터링)
-    const [deathEvents, castEvents, damageEvents, healEvents, combatantInfoEvents] = await Promise.all([
+    // 2. 이벤트 병렬 조회
+    const [deathEvents, castEvents, damageEvents, healEvents] = await Promise.all([
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Deaths', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Casts', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'DamageDone', hostilityType: 'Friendlies', startTime, endTime }),
       fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'Healing', hostilityType: 'Friendlies', startTime, endTime }),
-      fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'CombatantInfo', startTime, endTime }),
     ]);
+    // combatantInfo는 실패해도 무시 (specID 없으면 아이콘만 미표시)
+    const combatantInfoEvents = await fetchPagedEvents({ accessToken: token, reportId: reportCode, fightId, dataType: 'CombatantInfo', startTime, endTime }).catch(() => []);
 
     // combatantInfo → specIdMap (actorId → specId) + 실제 전투 참여자 집합
     const specIdMap = new Map<number, number>();
