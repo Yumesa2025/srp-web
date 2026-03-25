@@ -176,8 +176,148 @@ function RosterHelp() {
 
 function MarketHelp() {
   return (
-    <div className="text-gray-400 text-xl">
-      <p>준비 중입니다.</p>
+    <div className="space-y-10">
+
+      {/* 개요 */}
+      <Section title="💰 공대 거래란?">
+        <p className="text-gray-400 text-xl leading-relaxed">
+          애드온의 거래 장부에서 내보낸 데이터를 웹에 붙여넣으면 자동으로 파싱하고,
+          1인당 분배금 계산 · 회차 저장 · 누적 통계까지 한 번에 처리할 수 있습니다.
+        </p>
+      </Section>
+
+      {/* 장부 불러오기 */}
+      <Section title="📥 장부 불러오기 & 정산 요약 복사">
+        <div className="space-y-3">
+          <Step num={1}>
+            애드온 거래 장부에서 <span className="text-white font-semibold">내보내기</span>로 복사한 데이터를 상단 입력란에 붙여넣기 합니다.
+            <br/>
+            <span className="text-gray-500 text-lg">형식: <Code>아이템ID;낙찰자;골드|아이템ID;낙찰자;골드|...</Code></span>
+          </Step>
+          <Step num={2}>
+            <span className="text-white font-semibold">장부 불러오기 📥</span> 버튼을 누르면 아이템 목록과 분배 계산기가 자동으로 채워집니다.
+            아이템 아이콘과 이름도 자동으로 조회됩니다.
+          </Step>
+          <Step num={3}>
+            <span className="text-white font-semibold">정산 요약 복사 📋</span> 버튼을 누르면 총 모금액 · 공대비 · 1인당 분배금 요약을 클립보드에 복사합니다.
+            공대원에게 바로 붙여넣어 공유할 수 있습니다.
+          </Step>
+        </div>
+      </Section>
+
+      {/* 거래 내역 */}
+      <Section title="📦 거래 내역">
+        <p className="text-gray-400 text-xl leading-relaxed">
+          장부를 불러오면 아이템 목록이 표시됩니다.
+        </p>
+        <div className="space-y-2">
+          {[
+            { label: "아이템 아이콘 · 이름", desc: "Wowhead에서 자동 조회되며, 이름 클릭 시 Wowhead 아이템 페이지로 이동합니다." },
+            { label: "낙찰자", desc: "애드온에서 입력한 낙찰자 이름이 표시됩니다." },
+            { label: "낙찰 골드", desc: "거래된 골드 금액이 표시됩니다." },
+          ].map(({ label, desc }) => (
+            <div key={label} className="flex gap-3 p-3 bg-gray-800 rounded-xl border border-gray-700/60">
+              <span className="text-white font-semibold text-xl shrink-0">{label}</span>
+              <span className="text-gray-400 text-xl">— {desc}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* 분배 계산기 */}
+      <Section title="🧮 분배 계산기">
+        <p className="text-gray-400 text-xl leading-relaxed">
+          세 가지 값을 입력하면 1인당 분배금이 자동으로 계산됩니다.
+        </p>
+        <div className="overflow-hidden rounded-xl border border-gray-700">
+          <table className="w-full text-xl">
+            <thead>
+              <tr className="bg-gray-800 border-b border-gray-700">
+                <th className="px-5 py-3 text-left text-gray-400 font-semibold">항목</th>
+                <th className="px-5 py-3 text-left text-gray-400 font-semibold">설명</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { item: "공대원 수", desc: "이번 레이드의 분배 대상 인원 수 (기본값 20)" },
+                { item: "공대비(G)", desc: "레이드 운영비용으로 차감할 골드 (수리비 등)" },
+                { item: "공대 추가금(G)", desc: "공대장이 추가로 넣은 골드 (총 모금액에 합산)" },
+                { item: "총 모금액", desc: "모든 낙찰 골드의 합계" },
+                { item: "분배 대상", desc: "총 모금액 + 추가금 − 공대비" },
+                { item: "1인당 분배금", desc: "분배 대상을 공대원 수로 나눈 최종 금액" },
+                { item: "분배 잔액", desc: "나누고 남은 나머지 골드" },
+              ].map(({ item, desc }) => (
+                <tr key={item} className="border-b border-gray-700/40 last:border-0">
+                  <td className="px-5 py-3 text-white font-semibold whitespace-nowrap">{item}</td>
+                  <td className="px-5 py-3 text-gray-400">{desc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      {/* 이 회차 저장하기 */}
+      <Section title="💾 이 회차 저장하기">
+        <div className="p-4 bg-yellow-900/20 border border-yellow-700/30 rounded-xl mb-3">
+          <p className="text-yellow-400 text-lg font-semibold">🔒 로그인 후 이용 가능</p>
+        </div>
+        <p className="text-gray-400 text-xl leading-relaxed">
+          장부를 불러온 뒤 하단의 <span className="text-white font-semibold">이 회차 저장하기</span> 패널에서 원하는 이름으로 저장할 수 있습니다.
+          저장하면 누적 기록에 자동으로 추가됩니다.
+        </p>
+      </Section>
+
+      {/* Discord 전송 */}
+      <Section title="💬 Discord 전송">
+        <p className="text-gray-400 text-xl leading-relaxed mb-3">
+          장부를 불러오면 <span className="text-white font-semibold">Discord 전송</span> 버튼이 나타납니다.
+          클릭하면 정산 요약(총 모금액 · 공대비 · 1인당 분배금 · 아이템 목록)을 연결된 디스코드 채널로 전송합니다.
+        </p>
+        <div className="p-3 bg-gray-900 rounded-lg border border-gray-700/50">
+          <p className="text-gray-500 text-lg font-semibold mb-1">Discord 웹훅 연결 방법</p>
+          <p className="text-gray-400 text-lg leading-relaxed">
+            우상단 프로필 → <span className="text-white">⚙️ 설정</span> → Discord Webhook URL 입력.
+            웹훅 URL은 Discord 서버 → 채널 편집 → <span className="text-white">연동</span> 탭 → <span className="text-white">웹후크 만들기</span> → URL 복사로 얻을 수 있습니다.
+          </p>
+        </div>
+      </Section>
+
+      {/* 누적 기록 */}
+      <Section title="📊 누적 기록">
+        <div className="p-4 bg-yellow-900/20 border border-yellow-700/30 rounded-xl mb-3">
+          <p className="text-yellow-400 text-lg font-semibold">🔒 로그인 후 이용 가능</p>
+        </div>
+        <p className="text-gray-400 text-xl leading-relaxed mb-4">
+          저장한 회차들을 모아 세 가지 탭으로 확인할 수 있습니다.
+        </p>
+        <div className="space-y-3">
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-1">📋 회차 목록</p>
+            <p className="text-gray-400 text-xl">
+              저장된 모든 회차를 카드 형식으로 표시합니다.
+              각 회차의 총 모금액 · 1인당 분배금 · 인원 · 공대비를 한눈에 볼 수 있습니다.
+              <span className="text-white font-semibold"> 불러오기</span> 버튼으로 해당 회차 데이터를 상단 입력란에 다시 불러올 수 있고,
+              필요 없는 회차는 삭제할 수 있습니다.
+            </p>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-1">📦 아이템 통계</p>
+            <p className="text-gray-400 text-xl">
+              모든 회차의 아이템 기록을 집계해 등장 횟수 · 평균 낙찰금 · 최고 낙찰금 · 총 낙찰금을 표시합니다.
+              등장 횟수 / 평균 낙찰금 / 총 낙찰금 기준으로 정렬할 수 있습니다.
+            </p>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-1">📈 골드 추이</p>
+            <p className="text-gray-400 text-xl">
+              회차별 1인당 분배금을 바 차트로 비교합니다.
+              가장 높은 회차는 금색으로 강조 표시됩니다.
+            </p>
+          </div>
+        </div>
+      </Section>
+
     </div>
   );
 }
