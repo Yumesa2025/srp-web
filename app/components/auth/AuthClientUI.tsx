@@ -101,8 +101,9 @@ export default function AuthClientUI({ user }: { user: User | null }) {
         </div>
 
         {/* 프로필 모달 */}
-        {isProfileOpen && (
-          <ProfileModal user={user} onClose={() => setIsProfileOpen(false)} />
+        {isProfileOpen && mounted && createPortal(
+          <ProfileModal user={user} onClose={() => setIsProfileOpen(false)} />,
+          document.body
         )}
       </>
     );
