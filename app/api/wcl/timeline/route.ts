@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getWclToken } from '@/app/lib/tokenCache';
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
+import { createClient } from '@/app/utils/supabase/server';
 
 interface TimelineEventNode {
   type: string;
@@ -29,6 +31,13 @@ interface WclTimelineResponse {
 }
 
 export async function GET(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
+  const rl = checkRateLimit(getClientIp(request), 'wcl-timeline', 20, 60_000);
+  if (!rl.allowed) return NextResponse.json({ error: '요청이 너무 많습니다.' }, { status: 429 });
+
   const { searchParams } = new URL(request.url);
   const reportId  = searchParams.get('reportId');
   const fightId   = searchParams.get('fightId');
