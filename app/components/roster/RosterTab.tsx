@@ -12,6 +12,13 @@ const WOW_CLASSES = [
   "주술사", "마법사", "흑마법사", "수도사", "드루이드", "악마사냥꾼", "기원사",
 ] as const;
 
+const ARMOR_TYPE: Record<string, string> = {
+  "마법사": "천", "흑마법사": "천", "사제": "천",
+  "도적": "가죽", "드루이드": "가죽", "수도사": "가죽", "악마사냥꾼": "가죽",
+  "사냥꾼": "사슬", "주술사": "사슬",
+  "전사": "판금", "성기사": "판금", "죽음의 기사": "판금", "기원사": "판금",
+};
+
 const getClassColor = (className?: string) => {
   const colors: Record<string, string> = {
     "전사": "#C69B6D", "성기사": "#F48CBA", "사냥꾼": "#ABD473", "도적": "#FFF468",
@@ -85,6 +92,15 @@ export default function RosterTab({
   const assignedPlayersCount = players.filter((p) => p.role !== "UNASSIGNED").length;
   const presentClassNames = new Set(
     players.map((p) => p.className).filter((c): c is string => Boolean(c))
+  );
+
+  const armorCounts = players.reduce<Record<string, number>>(
+    (acc, p) => {
+      const armor = p.className ? ARMOR_TYPE[p.className] : undefined;
+      if (armor) acc[armor] = (acc[armor] ?? 0) + 1;
+      return acc;
+    },
+    { "천": 0, "가죽": 0, "사슬": 0, "판금": 0 }
   );
 
   const handleCopyRoster = async () => {
@@ -179,6 +195,49 @@ export default function RosterTab({
         </div>
       </div>
 
+      {/* 직업 상태 + 갑옷 타입 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* 직업 상태 */}
+        <div className="p-6 md:p-7 rounded-2xl border-2 border-cyan-400/35 bg-linear-to-br from-gray-800 via-gray-800/95 to-gray-900 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+            <div className="text-lg md:text-xl text-cyan-300 font-bold">직업 상태</div>
+            <div className="text-xs md:text-sm text-gray-400">명단에 있는 직업은 직업색으로 표시됩니다.</div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {WOW_CLASSES.map((className) => {
+              const hasClass = presentClassNames.has(className);
+              const classColor = getClassColor(className);
+              return (
+                <span
+                  key={className}
+                  className="px-3 py-2 rounded-lg border text-sm md:text-base font-bold tracking-tight transition-all shadow-sm"
+                  style={{
+                    color: hasClass ? getReadableTextColor(classColor) : "#9CA3AF",
+                    borderColor: hasClass ? classColor : "#4B5563",
+                    backgroundColor: hasClass ? classColor : "rgba(75,85,99,0.18)",
+                  }}
+                >
+                  {className}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 갑옷 타입 */}
+        <div className="p-6 md:p-7 rounded-2xl border-2 border-cyan-400/35 bg-linear-to-br from-gray-800 via-gray-800/95 to-gray-900 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
+          <div className="text-lg md:text-xl text-cyan-300 font-bold mb-4">갑옷 타입</div>
+          <div className="grid grid-cols-2 gap-4">
+            {(["천", "가죽", "사슬", "판금"] as const).map((armor) => (
+              <div key={armor} className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600">
+                <span className="text-sm font-bold text-gray-300">{armor}</span>
+                <span className="text-xl font-black text-white">{armorCounts[armor]}<span className="text-sm font-normal text-gray-400 ml-1">명</span></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* 미분류 대기소 */}
       <div className="mb-6">
         <RaidZone
@@ -202,33 +261,6 @@ export default function RosterTab({
             onRemovePlayer={onRemovePlayer} onToggleDefensive={onToggleDefensive} getClassColor={getClassColor}
           />
         ))}
-      </div>
-
-      {/* 직업 상태 */}
-      <div className="mb-10 p-6 md:p-7 rounded-2xl border-2 border-cyan-400/35 bg-linear-to-br from-gray-800 via-gray-800/95 to-gray-900 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-          <div className="text-lg md:text-xl text-cyan-300 font-bold">직업 상태</div>
-          <div className="text-xs md:text-sm text-gray-400">명단에 있는 직업은 직업색으로 표시됩니다.</div>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {WOW_CLASSES.map((className) => {
-            const hasClass = presentClassNames.has(className);
-            const classColor = getClassColor(className);
-            return (
-              <span
-                key={className}
-                className="px-3 py-2 rounded-lg border text-sm md:text-base font-bold tracking-tight transition-all shadow-sm"
-                style={{
-                  color: hasClass ? getReadableTextColor(classColor) : "#9CA3AF",
-                  borderColor: hasClass ? classColor : "#4B5563",
-                  backgroundColor: hasClass ? classColor : "rgba(75,85,99,0.18)",
-                }}
-              >
-                {className}
-              </span>
-            );
-          })}
-        </div>
       </div>
     </>
   );
