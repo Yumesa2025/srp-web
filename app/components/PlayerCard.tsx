@@ -6,7 +6,6 @@ import { PlayerData } from "@/app/types";
 interface PlayerCardProps {
   onDragStart: (e: React.DragEvent, id: string) => void;
   onRemovePlayer: (playerId: string) => void;
-  onToggleDefensive: (playerId: string, skillName: string) => void;
   getClassColor: (className?: string) => string;
   player: PlayerData;
 }
@@ -46,7 +45,6 @@ const formatWclScore = (value?: number | null) => {
 export default function PlayerCard({
   onDragStart,
   onRemovePlayer,
-  onToggleDefensive,
   getClassColor,
   player: p,
 }: PlayerCardProps) {
@@ -63,7 +61,7 @@ export default function PlayerCard({
           <div className="flex items-center gap-2 min-w-0">
             {p.error ? (
               <span
-                className="font-bold text-lg drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] truncate"
+                className="font-bold text-2xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] truncate"
                 style={{ color: getClassColor(p.className) }}
               >
                 {p.name}
@@ -75,7 +73,7 @@ export default function PlayerCard({
                 rel="noopener noreferrer"
                 draggable={false}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="font-bold text-lg drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] truncate hover:underline hover:brightness-125 transition-colors"
+                className="font-bold text-2xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] truncate hover:underline hover:brightness-125 transition-colors"
                 style={{ color: getClassColor(p.className) }}
                 title="Warcraft Logs 캐릭터 페이지 열기"
               >
@@ -83,14 +81,14 @@ export default function PlayerCard({
               </a>
             )}
             {p.activeSpec && (
-              <span className={`text-xs px-2 py-0.5 rounded border shadow-sm font-semibold whitespace-nowrap ${getRoleBadgeColor(p.role)}`}>
+              <span className={`text-sm px-2 py-0.5 rounded border shadow-sm font-semibold whitespace-nowrap ${getRoleBadgeColor(p.role)}`}>
                 {p.activeSpec}
               </span>
             )}
           </div>
-          {p.error && <p className="text-red-400 text-xs font-semibold mt-1">{p.error}</p>}
+          {p.error && <p className="text-base text-red-400 font-semibold mt-1">{p.error}</p>}
           {!p.error && (
-            <div className="text-xs text-gray-400 mt-1 font-mono flex flex-wrap gap-x-3 gap-y-1">
+            <div className="text-base text-gray-400 mt-1 font-mono flex flex-wrap gap-x-3 gap-y-1">
               {p.itemLevel !== undefined && (
                 <span>
                   템렙: <span className="text-yellow-400">{p.itemLevel}</span>
@@ -132,25 +130,6 @@ export default function PlayerCard({
           {confirmDelete ? "확인" : "✕"}
         </button>
       </div>
-
-      {!p.error && p.defensives && p.defensives.length > 0 && (
-        <div className="pt-2 mt-2 border-t border-gray-600/50 flex flex-wrap gap-1">
-          {p.defensives.map((d, i) => (
-            <button
-              key={i}
-              onClick={() => onToggleDefensive(p.id, d.name)}
-              className={`text-xs px-2 py-1 rounded-md shadow transition-colors ${
-                d.isActive
-                  ? "bg-blue-800 text-blue-100 border border-blue-500 hover:bg-blue-700"
-                  : "bg-gray-700 text-gray-500 border border-gray-600 opacity-50 line-through hover:bg-gray-600"
-              }`}
-              title="클릭하여 AI 택틱 사용 여부 토글"
-            >
-              🛡️ {d.name}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

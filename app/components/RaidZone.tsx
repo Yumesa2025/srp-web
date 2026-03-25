@@ -12,7 +12,6 @@ interface RaidZoneProps {
   onDrop: (e: React.DragEvent, role: RoleType) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onRemovePlayer: (playerId: string) => void;
-  onToggleDefensive: (playerId: string, skillName: string) => void;
   getClassColor: (className?: string) => string;
 }
 
@@ -25,7 +24,6 @@ export default function RaidZone({
   onDrop,
   onDragStart,
   onRemovePlayer,
-  onToggleDefensive,
   getClassColor,
 }: RaidZoneProps) {
   const zonePlayers = players.filter((p) => p.role === role);
@@ -47,7 +45,6 @@ export default function RaidZone({
             player={p}
             onDragStart={onDragStart}
             onRemovePlayer={onRemovePlayer}
-            onToggleDefensive={onToggleDefensive}
             getClassColor={getClassColor}
           />
         ))}

@@ -47,7 +47,6 @@ interface RosterTabProps {
   onDrop: (e: React.DragEvent, role: RoleType) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onRemovePlayer: (id: string) => void;
-  onToggleDefensive: (playerId: string, skillName: string) => void;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -85,7 +84,7 @@ function buildRosterText(players: PlayerData[]): string {
 
 export default function RosterTab({
   inputText, onInputTextChange, players, isLoading, skippedDuplicates,
-  onFetchRaidData, onDragOver, onDrop, onDragStart, onRemovePlayer, onToggleDefensive,
+  onFetchRaidData, onDragOver, onDrop, onDragStart, onRemovePlayer,
 }: RosterTabProps) {
   const [copyLabel, setCopyLabel] = useState("구성 복사");
   const totalPlayersCount = players.length;
@@ -243,7 +242,7 @@ export default function RosterTab({
         <RaidZone
           role="UNASSIGNED" title="❓ 미분류 대기소" bgColor="bg-gray-800/50"
           players={players} onDragOver={onDragOver} onDrop={onDrop} onDragStart={onDragStart}
-          onRemovePlayer={onRemovePlayer} onToggleDefensive={onToggleDefensive} getClassColor={getClassColor}
+          onRemovePlayer={onRemovePlayer} getClassColor={getClassColor}
         />
       </div>
 
@@ -258,7 +257,7 @@ export default function RosterTab({
           <RaidZone
             key={role} role={role} title={title} bgColor={bgColor}
             players={players} onDragOver={onDragOver} onDrop={onDrop} onDragStart={onDragStart}
-            onRemovePlayer={onRemovePlayer} onToggleDefensive={onToggleDefensive} getClassColor={getClassColor}
+            onRemovePlayer={onRemovePlayer} getClassColor={getClassColor}
           />
         ))}
       </div>

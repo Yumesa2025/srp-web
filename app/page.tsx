@@ -153,22 +153,6 @@ export default function Home() {
     }
   };
 
-  const toggleDefensive = (playerId: string, skillName: string) => {
-    setPlayers((prev) =>
-      prev.map((p) => {
-        if (p.id === playerId && p.defensives) {
-          return {
-            ...p,
-            defensives: p.defensives.map((d) =>
-              d.name === skillName ? { ...d, isActive: !d.isActive } : d
-            ),
-          };
-        }
-        return p;
-      })
-    );
-  };
-
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedPlayerId(id);
     e.dataTransfer.effectAllowed = "move";
@@ -210,7 +194,6 @@ export default function Home() {
               onDrop={handleDrop}
               onDragStart={handleDragStart}
               onRemovePlayer={removePlayer}
-              onToggleDefensive={toggleDefensive}
             />
           </ErrorBoundary>
         </div>
