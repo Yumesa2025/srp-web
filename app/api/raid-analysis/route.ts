@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 import { getWclToken } from '@/app/lib/tokenCache';
+import { createClient } from '@/app/utils/supabase/server';
 import { fetchWclGraphQL, fetchPagedEvents, WclActorNode, WclAbilityNode, WclEventNode, WclFightNode } from '@/app/api/logs/helpers';
 import { BLOODLUST_ABILITY_NAMES } from '@/app/constants/defensiveDefaults';
 import { translateBossName } from '@/app/constants/bossNames';
@@ -56,6 +57,10 @@ function calcBloodlustAvg(
 
 // ── GET: 전투 목록 ─────────────────────────────────────────────
 export async function GET(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
   const rl = checkRateLimit(getClientIp(request), 'raid-analysis-fights', 20, 60_000);
   if (!rl.allowed) return NextResponse.json({ error: '요청이 너무 많습니다.' }, { status: 429 });
 
@@ -85,23 +90,12 @@ export async function GET(request: Request) {
     if (!reportNode) {
       return NextResponse.json({
         error: `WCL 리포트를 찾지 못했습니다. report(code: "${code}")가 null입니다.`,
-        _debug: {
-          reportCode: code,
-          graphqlErrors: data?.errors ?? [],
-          reportExists: false,
-        },
       }, { status: 404 });
     }
 
     if (!Array.isArray(reportNode.fights)) {
       return NextResponse.json({
         error: 'WCL 리포트는 찾았지만 fights 필드가 배열이 아닙니다.',
-        _debug: {
-          reportCode: code,
-          reportExists: true,
-          fightsIsArray: false,
-          fightsValue: reportNode.fights ?? null,
-        },
       }, { status: 502 });
     }
 
@@ -121,16 +115,7 @@ export async function GET(request: Request) {
         fightStartedAt: reportStartTime > 0 ? reportStartTime + f.startTime : undefined,
       }));
 
-    return NextResponse.json({
-      fights,
-      _debug: {
-        reportCode: code,
-        reportExists: true,
-        rawFightCount: raw.length,
-        mappedFightCount: fights.length,
-        rawPreview: raw.slice(0, 3),
-      },
-    });
+    return NextResponse.json({ fights });
   } catch (e) {
     const raw = e instanceof Error ? e.message : '전투 목록을 불러오지 못했습니다.';
     const msg = raw.includes('429')
@@ -154,6 +139,10 @@ const AnalysisSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+
   const rl = checkRateLimit(getClientIp(request), 'raid-analysis-full', 5, 60_000);
   if (!rl.allowed) return NextResponse.json({ error: '요청이 너무 많습니다.' }, { status: 429 });
 

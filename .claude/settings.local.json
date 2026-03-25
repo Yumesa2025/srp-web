@@ -18,7 +18,9 @@
       "Bash(git push:*)",
       "Bash(xargs grep:*)",
       "Bash(grep -r \"fightId\\\\|fight\\\\.id\" /c/project/srp-web/app/components --include=*.tsx)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(grep -r SUPABASE_SERVICE C:/project/srp-web/.env*)",
+      "Bash(ls C:/project/srp-web/.env*)"
     ]
   }
 }

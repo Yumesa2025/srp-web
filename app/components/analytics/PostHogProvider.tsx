@@ -18,9 +18,6 @@ if (typeof window !== "undefined") {
       capture_pageleave: true,
       autocapture: true,
     });
-  } else {
-    // 키가 없으면 콘솔에 경고를 띄워 범인을 찾습니다.
-    console.warn("❌ PostHog: NEXT_PUBLIC_POSTHOG_KEY가 없습니다. 환경 변수를 확인하세요.");
   }
 }
 
@@ -36,7 +33,6 @@ function PostHogPageviewTracker() {
         url = url + `?${searchParams.toString()}`;
       }
       
-      console.log("✅ PostHog: Pageview 전송 -", url);
       posthog.capture("$pageview", { $current_url: url });
     }
   }, [pathname, searchParams]);

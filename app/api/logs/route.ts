@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 import { getWclToken } from "@/app/lib/tokenCache";
+import { createClient } from "@/app/utils/supabase/server";
 
 const LogsRequestSchema = z.object({
   reportId: z.string().min(1, "reportId가 필요합니다."),
@@ -33,6 +34,12 @@ function extractReportCode(raw: string): string {
 }
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+  }
+
   const rl = checkRateLimit(getClientIp(request), "logs", 10, 60_000);
   if (!rl.allowed) {
     return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });

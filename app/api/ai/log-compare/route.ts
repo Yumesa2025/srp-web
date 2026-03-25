@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
+import { createClient } from "@/app/utils/supabase/server";
 
 interface CompareInputLog {
   reportId: string;
@@ -91,6 +93,17 @@ const buildFallbackAnalysis = (failed: CompareInputLog, successes: CompareInputL
 };
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+  }
+
+  const rl = checkRateLimit(getClientIp(request), "ai-log-compare", 5, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });
+  }
+
   try {
     const body = (await request.json()) as {
       failedLog?: CompareInputLog;
