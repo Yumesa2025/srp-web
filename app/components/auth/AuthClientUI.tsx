@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { login, signup, signout } from '@/app/actions/auth';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/app/utils/supabase/client';
@@ -16,6 +17,8 @@ export default function AuthClientUI({ user }: { user: User | null }) {
   const [isOAuthPending, setIsOAuthPending] = useState(false);
   const [errorMsg,   setErrorMsg]   = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const avatarUrl   = (user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture) as string | undefined;
   const displayName = (user?.user_metadata?.name ?? user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '사용자') as string;
@@ -123,9 +126,9 @@ export default function AuthClientUI({ user }: { user: User | null }) {
         </button>
       </div>
 
-      {isAuthOpen && (
+      {isAuthOpen && mounted && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) setIsAuthOpen(false); }}
         >
           <div className="relative w-full max-w-sm bg-gray-900 border border-gray-700 shadow-2xl rounded-3xl p-8">
@@ -211,7 +214,8 @@ export default function AuthClientUI({ user }: { user: User | null }) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
