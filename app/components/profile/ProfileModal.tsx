@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/app/utils/supabase/client";
 import { loadRosters, deleteRoster } from "@/app/actions/roster";
@@ -50,6 +51,7 @@ interface Props {
 
 export default function ProfileModal({ user, onClose }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const router   = useRouter();
 
   const [tab, setTab]               = useState<ProfileTab>("rosters");
   const [rosters, setRosters]       = useState<Roster[]>([]);
@@ -57,9 +59,30 @@ export default function ProfileModal({ user, onClose }: Props) {
   const [isLoading, setIsLoading]   = useState(true);
   const [confirmRosterId, setConfirmRosterId] = useState<string | null>(null);
 
+  // 닉네임 변경
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput]         = useState("");
+  const [nameSaving, setNameSaving]       = useState(false);
+  const [nameError, setNameError]         = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
   const avatarUrl   = (user.user_metadata?.avatar_url ?? user.user_metadata?.picture) as string | undefined;
   const displayName = (user.user_metadata?.name ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자") as string;
   const joinDate    = formatDate(user.created_at);
+
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) { setNameError("닉네임을 입력해주세요."); return; }
+    if (trimmed === displayName) { setIsEditingName(false); return; }
+    setNameSaving(true);
+    setNameError("");
+    const { error } = await supabase.auth.updateUser({ data: { name: trimmed, full_name: trimmed } });
+    setNameSaving(false);
+    if (error) { setNameError("저장에 실패했습니다."); return; }
+    setIsEditingName(false);
+    router.refresh();
+  };
 
   // 모달 열릴 때 파티원 명단 + 공대 거래 동시 로드
   useEffect(() => {
@@ -133,8 +156,46 @@ export default function ProfileModal({ user, onClose }: Props) {
               </div>
             )}
 
-            <div className="min-w-0">
-              <h2 className="text-xl font-bold text-white truncate">{displayName}</h2>
+            <div className="min-w-0 flex-1">
+              {/* 닉네임 행 */}
+              {isEditingName ? (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={nameInputRef}
+                      value={nameInput}
+                      onChange={e => setNameInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleSaveName(); if (e.key === "Escape") setIsEditingName(false); }}
+                      maxLength={30}
+                      className="flex-1 min-w-0 px-3 py-1.5 bg-gray-800 border border-cyan-500 rounded-lg text-white text-sm font-bold focus:outline-none"
+                    />
+                    <button
+                      onClick={handleSaveName}
+                      disabled={nameSaving}
+                      className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-700 text-white text-xs font-bold rounded-lg transition-colors shrink-0"
+                    >
+                      {nameSaving ? "저장 중..." : "저장"}
+                    </button>
+                    <button
+                      onClick={() => { setIsEditingName(false); setNameError(""); }}
+                      className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-400 text-xs rounded-lg transition-colors shrink-0"
+                    >
+                      취소
+                    </button>
+                  </div>
+                  {nameError && <p className="text-red-400 text-xs">{nameError}</p>}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl font-bold text-white truncate">{displayName}</h2>
+                  <button
+                    onClick={() => { setNameInput(displayName); setIsEditingName(true); setTimeout(() => nameInputRef.current?.focus(), 30); }}
+                    className="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 text-gray-400 hover:text-white text-xs rounded-md transition-colors shrink-0"
+                  >
+                    닉네임 변경
+                  </button>
+                </div>
+              )}
               <p className="text-gray-400 text-sm mt-0.5 truncate">{user.email}</p>
               <p className="text-gray-600 text-xs mt-1">가입일 · {joinDate}</p>
             </div>
