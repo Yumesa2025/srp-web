@@ -194,7 +194,7 @@ export default function Home() {
   return (
     <div className="min-h-screen p-8 bg-gray-900 text-white font-sans">
       <div className="max-w-[1400px] mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-yellow-400">Smart Raid Planner (SRP)</h1>
+        <h1 className="text-3xl font-bold mb-6 text-yellow-400">Smart Raid Planner (SRP) <span className="text-sm font-medium text-gray-400 align-middle">베타</span></h1>
 
         <MainTabs activeTab={activeTab} onChange={(tab) => { setActiveTab(tab); analytics.trackTabChange(tab); }} />
 
