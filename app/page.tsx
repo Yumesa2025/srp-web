@@ -198,7 +198,7 @@ export default function Home() {
 
         <MainTabs activeTab={activeTab} onChange={(tab) => { setActiveTab(tab); analytics.trackTabChange(tab); }} />
 
-        {activeTab === "ROSTER" && (
+        <div className={activeTab === "ROSTER" ? "" : "hidden"}>
           <ErrorBoundary>
             <RosterTab
               inputText={inputText}
@@ -214,25 +214,25 @@ export default function Home() {
               onToggleDefensive={toggleDefensive}
             />
           </ErrorBoundary>
-        )}
+        </div>
 
-        {activeTab === "RAID_MARKET" && (
+        <div className={activeTab === "RAID_MARKET" ? "" : "hidden"}>
           <ErrorBoundary>
             <RaidMarketTab />
           </ErrorBoundary>
-        )}
+        </div>
 
-        {activeTab === "RAID_AI_ANALYSIS" && (
+        <div className={activeTab === "RAID_AI_ANALYSIS" ? "" : "hidden"}>
           <ErrorBoundary>
             <RaidAnalysisTab />
           </ErrorBoundary>
-        )}
+        </div>
 
-        {activeTab === "HELP" && (
+        <div className={activeTab === "HELP" ? "" : "hidden"}>
           <ErrorBoundary>
             <HelpTab />
           </ErrorBoundary>
-        )}
+        </div>
       </div>
     </div>
   );
