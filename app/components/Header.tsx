@@ -6,9 +6,14 @@ export default async function Header() {
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
-    <header className="absolute top-0 right-0 p-6 z-50 pointer-events-none w-full flex justify-end">
-      {/* AuthClientUI 내부에서 포인터 이벤트를 다시 활성화해 버튼 클릭이 작동하게 합니다 */}
-      <AuthClientUI user={user} />
+    <header className="sticky top-0 z-50 w-full bg-gray-900/95 backdrop-blur-md border-b border-gray-800">
+      <div className="max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-yellow-400">
+          Smart Raid Planner (SRP){' '}
+          <span className="text-xs font-medium text-gray-400 align-middle">베타</span>
+        </h1>
+        <AuthClientUI user={user} />
+      </div>
     </header>
   );
 }
