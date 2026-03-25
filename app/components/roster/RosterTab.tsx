@@ -117,12 +117,17 @@ export default function RosterTab({
 
   return (
     <>
+      {/* 새로고침 안내 */}
+      <div className="mb-4 px-4 py-2 bg-yellow-900/30 border border-yellow-700/60 rounded-lg text-yellow-300 text-sm">
+        💾 명단은 새로고침하면 사라집니다. 오른쪽 <span className="font-bold">명단 저장소</span>에서 저장해두세요.
+      </div>
+
       {/* 파티원 명단 입력 */}
       <div className="mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
         <div className="flex justify-between items-start gap-4 mb-2">
           <label className="block text-gray-300 font-semibold">
-            1. 파티원 명단 입력
-            <span className="text-gray-500 text-xs font-normal block mt-1">(이름-서버명 한 줄에 하나씩)</span>
+            <span className="text-lg font-bold">1. 파티원 명단 입력</span>
+            <span className="text-gray-500 text-sm font-normal block mt-1">(이름-서버명 한 줄에 하나씩)</span>
           </label>
           <RosterManager currentText={inputText} onSelectRoster={onInputTextChange} />
         </div>
