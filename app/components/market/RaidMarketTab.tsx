@@ -211,7 +211,7 @@ export default function RaidMarketTab() {
           >
             정산 요약 복사 📋
           </button>
-          {ledgerItems.length > 0 && (
+          {ledgerItems.length > 0 && storage.isLoggedIn && (
             <DiscordSendButton
               label="Discord 전송"
               onSend={async () => {

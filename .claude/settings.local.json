@@ -20,7 +20,8 @@
       "Bash(grep -r \"fightId\\\\|fight\\\\.id\" /c/project/srp-web/app/components --include=*.tsx)",
       "Bash(npx tsc:*)",
       "Bash(grep -r SUPABASE_SERVICE C:/project/srp-web/.env*)",
-      "Bash(ls C:/project/srp-web/.env*)"
+      "Bash(ls C:/project/srp-web/.env*)",
+      "mcp__supabase__get_project_url"
     ]
   }
 }
