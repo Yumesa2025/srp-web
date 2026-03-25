@@ -6,15 +6,15 @@ import type { ReactNode } from 'react';
 type HelpSection = 'roster' | 'market' | 'analysis' | 'account' | 'addon';
 
 const TABS: { id: HelpSection; label: string }[] = [
+  { id: 'addon',    label: '애드온'      },
   { id: 'roster',   label: '파티원 명단' },
   { id: 'market',   label: '공대 거래'   },
   { id: 'analysis', label: '공대 분석'   },
   { id: 'account',  label: '회원'        },
-  { id: 'addon',    label: '애드온'      },
 ];
 
 export default function HelpTab() {
-  const [active, setActive] = useState<HelpSection>('roster');
+  const [active, setActive] = useState<HelpSection>('addon');
 
   return (
     <div className="space-y-6">
@@ -238,47 +238,80 @@ function AddonHelp() {
       </Section>
 
       {/* 탭 2 — 거래 장부 */}
-      <Section title="탭 2 — 거래 장부">
+      <Section title="탭 2 — 거래 장부 (Loot Ledger)">
         <p className="text-gray-400 text-xl leading-relaxed">
-          레이드에서 떨어진 아이템의 낙찰자와 골드를 보스별로 기록하는 장부입니다.
+          공대 레이드에서 획득한 아이템의 낙찰자와 거래 골드를 기록하고 관리하는 기능입니다.
+          공대장은 물론 일반 공대원도 쉽게 확인할 수 있도록 직관적인 UI로 구성되어 있습니다.
         </p>
 
         <div className="space-y-3">
+          {/* 세션 관리 */}
           <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
-            <p className="text-white text-xl font-semibold mb-2">세션 시스템</p>
+            <p className="text-white text-xl font-semibold mb-2">세션 관리</p>
+            <p className="text-gray-400 text-xl mb-2">레이드를 진행할 때마다 새 세션을 만들어 기록을 분리할 수 있습니다.</p>
             <ul className="space-y-1.5 text-gray-400 text-xl list-disc list-inside">
-              <li><span className="text-white font-semibold">새 세션 시작</span> 버튼으로 날짜+시간 기준 새 세션 생성</li>
-              <li>같은 날 두 번 레이드해도 별개 세션으로 분리됨</li>
-              <li>드롭다운으로 과거 세션 조회 및 삭제 가능</li>
+              <li>세션은 생성 시각(예: <Code>2026-03-25 15:40</Code>)을 기준으로 자동으로 이름이 붙습니다</li>
+              <li>상단의 세션 버튼을 클릭하면 과거 세션 목록을 드롭다운으로 확인하고 전환할 수 있습니다</li>
+              <li>필요 없는 세션은 삭제할 수 있으며, 삭제 전 확인 팝업이 표시됩니다</li>
+              <li>같은 날 레이드를 여러 번 진행해도 세션을 분리해서 기록할 수 있습니다</li>
             </ul>
           </div>
 
+          {/* 레이드 / 보스 선택 */}
           <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
-            <p className="text-white text-xl font-semibold mb-2">레이드 / 보스 탭</p>
-            <ul className="space-y-1.5 text-gray-400 text-xl list-disc list-inside">
+            <p className="text-white text-xl font-semibold mb-2">레이드 / 보스 선택</p>
+            <p className="text-gray-400 text-xl mb-2">현재 지원하는 레이드:</p>
+            <ul className="space-y-1.5 text-gray-400 text-xl list-disc list-inside mb-2">
               <li>공허첨탑 (6보스)</li>
               <li>꿈의 균열 (1보스)</li>
               <li>쿠엘다나스 진격로 (2보스)</li>
-              <li>낭만기타 (6슬롯)</li>
+              <li>낭만(기타) — 자유 슬롯 6개</li>
             </ul>
-            <p className="text-gray-500 text-lg mt-2">보스 탭에 마우스를 올리면 툴팁으로 보스 이름이 표시됩니다.</p>
+            <p className="text-gray-500 text-lg">레이드 탭 선택 후 보스 탭을 클릭해 아이템을 관리합니다. 보스 이름은 버튼에 마우스를 올리면 툴팁으로 확인할 수 있습니다.</p>
           </div>
 
+          {/* 아이템 등록 */}
           <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
-            <p className="text-white text-xl font-semibold mb-2">아이템 관리</p>
+            <p className="text-white text-xl font-semibold mb-2">아이템 등록</p>
+            <div className="space-y-2">
+              <div>
+                <p className="text-gray-300 text-xl font-semibold">방법 1 — 직접 드래그</p>
+                <p className="text-gray-400 text-xl">가방에서 아이템을 꺼내 드롭존에 드래그하면 현재 선택된 보스 슬롯에 즉시 등록됩니다.</p>
+              </div>
+              <div>
+                <p className="text-gray-300 text-xl font-semibold">방법 2 — 자동 루팅</p>
+                <p className="text-gray-400 text-xl">보스를 처치하면 애드온이 자동으로 감지하고, 이후 룻 주사위 창이 열릴 때 해당 아이템을 자동으로 해당 보스 슬롯에 추가합니다. 자동 루팅은 체크박스로 켜고 끌 수 있습니다.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 낙찰자 · 골드 기록 */}
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-2">낙찰자 · 골드 기록</p>
+            <p className="text-gray-400 text-xl mb-2">아이템이 등록되면 각 행에 두 가지를 입력할 수 있습니다:</p>
             <ul className="space-y-1.5 text-gray-400 text-xl list-disc list-inside">
-              <li>가방에서 드래그 → 드롭존에 놓으면 현재 탭에 추가</li>
-              <li><span className="text-white font-semibold">자동 루팅</span> 체크 시, 보스 처치 후 주사위 아이템 자동 기록</li>
-              <li>각 아이템에 낙찰자(공대원 드롭다운) + 골드 입력</li>
-              <li>X 버튼으로 개별 아이템 삭제 (확인 팝업)</li>
+              <li><span className="text-white font-semibold">낙찰자</span> — 버튼을 클릭하면 현재 공대 명단(명단 추출 탭 기준)이 드롭다운으로 표시되어 선택할 수 있습니다</li>
+              <li><span className="text-white font-semibold">골드</span> — 거래 금액을 직접 숫자로 입력합니다</li>
             </ul>
           </div>
 
+          {/* 내보내기 & 초기화 */}
           <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
             <p className="text-white text-xl font-semibold mb-2">내보내기</p>
-            <p className="text-gray-400 text-xl">
-              현재 보스 또는 현재 레이드 전체를 <Code>아이템ID;낙찰자;골드</Code> 형식으로 복사합니다.
-            </p>
+            <ul className="space-y-1.5 text-gray-400 text-xl list-disc list-inside mb-2">
+              <li><span className="text-white font-semibold">현재 넴 복사</span> — 현재 선택된 보스의 아이템만 복사</li>
+              <li><span className="text-white font-semibold">현재 레이드 전체 복사</span> — 선택된 레이드의 모든 보스 아이템 복사</li>
+            </ul>
+            <p className="text-gray-500 text-lg">복사 형식: <Code>아이템ID;낙찰자;골드|아이템ID;낙찰자;골드|...</Code></p>
+          </div>
+
+          {/* 초기화 */}
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-2">초기화</p>
+            <ul className="space-y-1.5 text-gray-400 text-xl list-disc list-inside">
+              <li><span className="text-white font-semibold">현재 넴 초기화</span> — 현재 보스 슬롯의 아이템 목록만 삭제</li>
+              <li><span className="text-white font-semibold">전체 초기화</span> — 현재 세션의 모든 레이드·보스 기록 삭제 (확인 팝업 표시)</li>
+            </ul>
           </div>
         </div>
       </Section>
