@@ -324,16 +324,162 @@ function MarketHelp() {
 
 function AnalysisHelp() {
   return (
-    <div className="text-gray-400 text-xl">
-      <p>준비 중입니다.</p>
+    <div className="space-y-10">
+
+      <Section title="🔍 공대 분석이란?">
+        <p className="text-gray-400 text-xl leading-relaxed">
+          <span className="text-white font-semibold">WarcraftLogs(WCL)</span> 리포트를 연동해 전투를 자동으로 분석합니다.
+          사망 원인, 소모품 사용 여부, 딜/힐 그래프, 생존기 타이밍을 한눈에 확인할 수 있습니다.
+        </p>
+        <div className="p-4 bg-yellow-900/20 border border-yellow-700/30 rounded-xl">
+          <p className="text-yellow-400 text-lg font-semibold">🔒 로그인 후 이용 가능</p>
+        </div>
+      </Section>
+
+      <Section title="📥 리포트 불러오기">
+        <div className="space-y-3">
+          <Step num={1}>
+            <a href="https://www.warcraftlogs.com" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">warcraftlogs.com</a>에서 공대 로그를 기록한 후, 리포트 URL을 복사합니다.
+          </Step>
+          <Step num={2}>
+            상단 입력란에 <span className="text-white font-semibold">URL 또는 리포트 코드</span>를 붙여넣고 <span className="text-white font-semibold">불러오기</span> 버튼을 누릅니다.
+          </Step>
+          <Step num={3}>
+            전투 목록이 표시되면 분석할 전투를 클릭합니다. 각 카드에는 <span className="text-white font-semibold">난이도</span>(일반/영웅/신화), <span className="text-white font-semibold">전투 시간</span>, <span className="text-white font-semibold">시작 시각</span>이 표시됩니다.
+          </Step>
+        </div>
+      </Section>
+
+      <Section title="💀 최초 사망 분석">
+        <p className="text-gray-400 text-xl leading-relaxed mb-3">
+          전투에서 가장 먼저 사망한 <span className="text-white font-semibold">상위 3명</span>을 분석합니다.
+        </p>
+        <div className="space-y-2">
+          {[
+            { label: '사망 시각',         desc: '전투 시작 기준 몇 분 몇 초에 사망했는지 표시됩니다.' },
+            { label: '사망 원인',         desc: 'Wowhead 한국어 데이터 기준으로 사망 원인 스킬명과 아이콘이 표시됩니다.' },
+            { label: '직전 5초 받은 피해', desc: '사망 직전 5초간 받은 총 피해량과 원인별 상위 피해를 확인할 수 있습니다.' },
+            { label: '생존기 사용',       desc: '사망 전에 사용한 생존기 목록이 표시됩니다. 아무것도 없으면 "사용 없음"으로 표시됩니다.' },
+            { label: 'HP',               desc: '사망 직전 남아있던 HP 비율이 표시됩니다.' },
+          ].map(({ label, desc }) => (
+            <div key={label} className="flex gap-3 p-3 bg-gray-800 rounded-xl border border-gray-700/60">
+              <span className="text-white font-semibold text-xl shrink-0">{label}</span>
+              <span className="text-gray-400 text-xl">— {desc}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="💊 소모품 체크">
+        <p className="text-gray-400 text-xl leading-relaxed mb-3">
+          공대원 전원의 소모품 사용 여부를 한 번에 확인합니다.
+          사용하지 않은 항목은 빨간 ❌로 강조됩니다.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {['공격물약', '생명석', '치유물약', '증강의 룬'].map(item => (
+            <span key={item} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-xl">{item}</span>
+          ))}
+        </div>
+        <p className="text-gray-500 text-lg mt-2">헤더의 ❌ 숫자로 미사용 인원 수를 빠르게 파악할 수 있습니다.</p>
+      </Section>
+
+      <Section title="📊 딜/힐 그래프">
+        <p className="text-gray-400 text-xl leading-relaxed mb-3">
+          공대원 각각의 <span className="text-white font-semibold">DPS / HPS 시간대별 그래프</span>를 확인할 수 있습니다.
+        </p>
+        <div className="space-y-2">
+          {[
+            { label: 'DPS / HPS 탭',    desc: '플레이어 카드 상단 탭으로 딜 그래프와 힐 그래프를 전환할 수 있습니다.' },
+            { label: '블러드러스트 구간', desc: '영웅의 외침 등 블러드러스트가 발동된 시간대가 주황색 음영으로 표시됩니다.' },
+            { label: '파워 인퓨전',      desc: '사제의 파워 인퓨전을 받은 시간대가 별도 표시됩니다.' },
+            { label: '평균 / 최고 DPS',  desc: '전체 평균과 블러드러스트 구간 평균을 각각 확인할 수 있습니다.' },
+          ].map(({ label, desc }) => (
+            <div key={label} className="flex gap-3 p-3 bg-gray-800 rounded-xl border border-gray-700/60">
+              <span className="text-white font-semibold text-xl shrink-0">{label}</span>
+              <span className="text-gray-400 text-xl">— {desc}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="🛡️ 생존기 사용 현황">
+        <p className="text-gray-400 text-xl leading-relaxed">
+          공대원별로 전투 중 생존기를 <span className="text-white font-semibold">몇 회, 몇 분 몇 초에</span> 사용했는지 확인할 수 있습니다.
+          스킬 아이콘과 사용 시각이 함께 표시됩니다.
+          감지 대상 생존기는 탱커 · 힐러 · 딜러의 주요 방어 스킬 수십 종이 자동 포함됩니다.
+        </p>
+      </Section>
+
     </div>
   );
 }
 
 function AccountHelp() {
   return (
-    <div className="text-gray-400 text-xl">
-      <p>준비 중입니다.</p>
+    <div className="space-y-10">
+
+      <Section title="👤 회원이란?">
+        <p className="text-gray-400 text-xl leading-relaxed">
+          SRP는 Google 계정 또는 이메일로 로그인할 수 있습니다.
+          로그인하면 파티원 명단 저장, 공대 거래 기록, 분석 기능 이용이 가능합니다.
+        </p>
+      </Section>
+
+      <Section title="🔑 로그인 / 회원가입">
+        <div className="space-y-3">
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-1">Google로 계속하기</p>
+            <p className="text-gray-400 text-xl">우상단 로그인 버튼 → Google로 계속하기를 누르면 구글 계정으로 즉시 로그인됩니다.</p>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-1">이메일 로그인</p>
+            <p className="text-gray-400 text-xl">이메일과 비밀번호로 회원가입 후 로그인할 수 있습니다.</p>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="👤 프로필">
+        <p className="text-gray-400 text-xl leading-relaxed mb-3">
+          우상단의 프로필 이름을 클릭하면 프로필 모달이 열립니다.
+          모달 안에 3개의 탭이 있습니다.
+        </p>
+        <div className="space-y-3">
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-1">📋 파티원 명단</p>
+            <p className="text-gray-400 text-xl">저장한 파티원 명단 목록을 확인하고 삭제할 수 있습니다.</p>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-1">💰 공대 거래</p>
+            <p className="text-gray-400 text-xl">저장한 공대 거래 회차 목록과 1인당 분배금을 확인할 수 있습니다.</p>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
+            <p className="text-white text-xl font-semibold mb-1">⚙️ 설정</p>
+            <p className="text-gray-400 text-xl">Discord Webhook URL 등록, 닉네임 변경, 회원 탈퇴를 할 수 있습니다.</p>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="✏️ 닉네임 변경">
+        <div className="space-y-2">
+          <Step num={1}>프로필 모달 상단 닉네임 옆 <span className="text-white font-semibold">닉네임 변경</span> 버튼 클릭</Step>
+          <Step num={2}>원하는 닉네임 입력 후 <span className="text-white font-semibold">저장</span> 또는 Enter</Step>
+          <Step num={3}>우상단 헤더에 즉시 반영됩니다</Step>
+        </div>
+      </Section>
+
+      <Section title="🚪 회원 탈퇴">
+        <p className="text-gray-400 text-xl leading-relaxed mb-3">
+          프로필 모달 → <span className="text-white font-semibold">⚙️ 설정</span> 탭 맨 아래 <span className="text-white font-semibold">위험 구역</span>에서 탈퇴할 수 있습니다.
+        </p>
+        <div className="p-4 bg-red-900/20 border border-red-700/30 rounded-xl">
+          <p className="text-red-400 text-xl font-semibold">⚠️ 주의</p>
+          <p className="text-gray-400 text-xl mt-1">
+            탈퇴 시 파티원 명단, 공대 거래 기록 등 모든 데이터가 <span className="text-red-400 font-bold">영구 삭제</span>되며 복구할 수 없습니다.
+            탈퇴 버튼 → 탈퇴 확인 버튼, 2번 눌러야 진행됩니다.
+          </p>
+        </div>
+      </Section>
+
     </div>
   );
 }
