@@ -20,6 +20,22 @@ function secondsToTime(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+function getDifficultyLabel(d?: number): { label: string; color: string } | null {
+  if (!d) return null;
+  if (d === 1) return { label: 'LFR',  color: 'bg-gray-700 text-gray-300' };
+  if (d === 3) return { label: '일반', color: 'bg-blue-900/50 text-blue-300' };
+  if (d === 4) return { label: '영웅', color: 'bg-purple-900/50 text-purple-300' };
+  if (d === 5) return { label: '신화', color: 'bg-orange-900/50 text-orange-300' };
+  return null;
+}
+
+function formatFightTime(fightStartedAt?: number): string {
+  if (!fightStartedAt) return '';
+  return new Date(fightStartedAt).toLocaleTimeString('ko-KR', {
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+}
+
 export default function RaidAnalysisTab() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [urlInput, setUrlInput]     = useState('');
@@ -161,7 +177,7 @@ export default function RaidAnalysisTab() {
       {fights.length > 0 && (
         <div className="bg-gray-800/60 rounded-xl border border-gray-700 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-700/60 flex items-center justify-between">
-            <p className="text-gray-300 font-bold text-sm">전투 목록 ({fights.length}개)</p>
+            <p className="text-gray-300 font-bold text-xl">전투 목록 ({fights.length}개)</p>
             <a
               href={`https://www.warcraftlogs.com/reports/${reportCode}`}
               target="_blank"
@@ -172,30 +188,42 @@ export default function RaidAnalysisTab() {
             </a>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 p-4">
-            {fights.map(fight => (
-              <button
-                key={fight.id}
-                onClick={() => analyzeFight(fight)}
-                disabled={isAnalyzing && selectedFightId === fight.id}
-                className={`text-left p-3 rounded-xl border transition-all ${
-                  selectedFightId === fight.id
-                    ? 'border-cyan-500/70 bg-cyan-900/20'
-                    : 'border-gray-700 bg-gray-900 hover:border-cyan-500/40 hover:bg-gray-800'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-white font-semibold text-sm truncate">{fight.name}</p>
-                  <span className={`shrink-0 text-xs font-bold px-1.5 py-0.5 rounded ${
-                    fight.kill
-                      ? 'bg-emerald-800/60 text-emerald-300'
-                      : 'bg-red-900/40 text-red-400'
-                  }`}>
-                    {fight.kill ? '처치' : `${fight.bossPercentage?.toFixed(1)}%`}
-                  </span>
-                </div>
-                <p className="text-gray-500 text-xs mt-1">{secondsToTime(fight.durationSec)}</p>
-              </button>
-            ))}
+            {fights.map(fight => {
+              const diff = getDifficultyLabel(fight.difficulty);
+              const timeStr = formatFightTime(fight.fightStartedAt);
+              return (
+                <button
+                  key={fight.id}
+                  onClick={() => analyzeFight(fight)}
+                  disabled={isAnalyzing && selectedFightId === fight.id}
+                  className={`text-left p-4 rounded-xl border transition-all ${
+                    selectedFightId === fight.id
+                      ? 'border-cyan-500/70 bg-cyan-900/20'
+                      : 'border-gray-700 bg-gray-900 hover:border-cyan-500/40 hover:bg-gray-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-white font-semibold text-xl truncate">{fight.name}</p>
+                    <span className={`shrink-0 text-base font-bold px-2 py-0.5 rounded ${
+                      fight.kill
+                        ? 'bg-emerald-800/60 text-emerald-300'
+                        : 'bg-red-900/40 text-red-400'
+                    }`}>
+                      {fight.kill ? '처치' : `${fight.bossPercentage?.toFixed(1)}%`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    {diff && (
+                      <span className={`text-sm font-bold px-2 py-0.5 rounded ${diff.color}`}>
+                        {diff.label}
+                      </span>
+                    )}
+                    <span className="text-gray-500 text-base">{secondsToTime(fight.durationSec)}</span>
+                    {timeStr && <span className="text-gray-600 text-base">{timeStr} 시작</span>}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -216,8 +244,8 @@ export default function RaidAnalysisTab() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h3 className="text-white font-black text-xl">{analysis.fight.name}</h3>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  <h3 className="text-white font-black text-3xl">{analysis.fight.name}</h3>
+                  <span className={`text-base font-bold px-2 py-0.5 rounded-full ${
                     analysis.fight.kill
                       ? 'bg-emerald-800/60 text-emerald-300 border border-emerald-700/40'
                       : 'bg-red-900/40 text-red-400 border border-red-800/40'
@@ -225,7 +253,7 @@ export default function RaidAnalysisTab() {
                     {analysis.fight.kill ? '처치' : `보스 ${analysis.fight.bossPercentage?.toFixed(1)}% 남음`}
                   </span>
                 </div>
-                <p className="text-gray-500 text-sm mt-1">
+                <p className="text-gray-500 text-xl mt-1">
                   전투 시간 {secondsToTime(analysis.fight.durationSec)}
                   {selectedFight && ` · 전투 #${selectedFight.id}`}
                 </p>

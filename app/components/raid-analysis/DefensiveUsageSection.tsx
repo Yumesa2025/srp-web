@@ -20,8 +20,8 @@ export default function DefensiveUsageSection({ players, makePlayerUrl }: Props)
           {collapsed ? '▶' : '▼'}
         </button>
         <div>
-          <h3 className="text-cyan-300 font-bold text-lg">🛡️ 생존기 사용 현황</h3>
-          <p className="text-sm text-gray-500 mt-0.5">설정된 생존기 기준 사용 횟수 및 타이밍</p>
+          <h3 className="text-cyan-300 font-bold text-2xl">🛡️ 생존기 사용 현황</h3>
+          <p className="text-xl text-gray-500 mt-0.5">설정된 생존기 기준 사용 횟수 및 타이밍</p>
         </div>
       </div>
 
@@ -42,18 +42,18 @@ export default function DefensiveUsageSection({ players, makePlayerUrl }: Props)
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ color: getClassColor(player.className) }}
-                      className="font-bold text-base hover:underline transition-colors truncate"
+                      className="font-bold text-xl hover:underline transition-colors truncate"
                     >
                       {player.name}
                     </a>
                   </div>
-                  <span className="text-cyan-400 font-black text-lg">
-                    {player.casts.length}<span className="text-sm text-gray-500 ml-1">회</span>
+                  <span className="text-cyan-400 font-black text-2xl">
+                    {player.casts.length}<span className="text-xl text-gray-500 ml-1">회</span>
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {player.casts.map((c, i) => (
-                    <span key={i} className="flex items-center gap-1 px-2 py-1 bg-cyan-900/30 border border-cyan-700/30 text-cyan-300 text-sm rounded-md">
+                    <span key={i} className="flex items-center gap-1 px-2 py-1 bg-cyan-900/30 border border-cyan-700/30 text-cyan-300 text-xl rounded-md">
                       {c.iconUrl && <img src={c.iconUrl} alt="" className="w-4 h-4 rounded shrink-0" />}
                       {c.timeStr} {c.ability}
                     </span>

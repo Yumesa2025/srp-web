@@ -11,6 +11,8 @@ export interface RaidFight {
   bossPercentage: number | null;
   startTime: number;
   endTime: number;
+  difficulty?: number;
+  fightStartedAt?: number;
 }
 
 export interface EarlyDeath {

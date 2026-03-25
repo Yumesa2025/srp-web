@@ -48,11 +48,11 @@ export default function ConsumablesSection({ consumables, makePlayerUrl }: Props
             {collapsed ? '▶' : '▼'}
           </button>
           <div>
-            <h3 className="text-yellow-300 font-bold text-lg">💊 소모품 체크</h3>
-            <p className="text-sm text-gray-500 mt-0.5">공격물약 · 생명석 · 치유물약</p>
+            <h3 className="text-yellow-300 font-bold text-2xl">💊 소모품 체크</h3>
+            <p className="text-xl text-gray-500 mt-0.5">공격물약 · 생명석 · 치유물약</p>
           </div>
         </div>
-        <div className="flex gap-4 text-sm text-gray-500">
+        <div className="flex gap-4 text-xl text-gray-500">
           <span>❌ 공격물약 <span className="text-red-400 font-bold">{dpsMissing}</span>명</span>
           <span>❌ 생명석 <span className="text-red-400 font-bold">{stoneMissing}</span>명</span>
           <span>❌ 치유물약 <span className="text-red-400 font-bold">{healMissing}</span>명</span>
@@ -64,7 +64,7 @@ export default function ConsumablesSection({ consumables, makePlayerUrl }: Props
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-700/60 text-sm text-gray-500 bg-gray-900/40">
+              <tr className="border-b border-gray-700/60 text-xl text-gray-500 bg-gray-900/40">
                 <th className="text-left px-5 py-3 font-semibold">플레이어</th>
                 <th className="text-center px-4 py-3 font-semibold">공격물약</th>
                 <th className="text-center px-4 py-3 font-semibold">생명석</th>
@@ -85,7 +85,7 @@ export default function ConsumablesSection({ consumables, makePlayerUrl }: Props
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{ color: getClassColor(row.className) }}
-                          className="font-semibold text-base hover:underline transition-colors"
+                          className="font-semibold text-xl hover:underline transition-colors"
                         >
                           {row.name}
                         </a>

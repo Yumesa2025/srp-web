@@ -8,6 +8,7 @@ export interface WclFightNode {
   kill?: boolean;
   bossPercentage?: number;
   size?: number;
+  difficulty?: number;
 }
 
 export interface WclAbilityNode {
@@ -44,6 +45,7 @@ interface WclGraphQlPayload {
   data?: {
     reportData?: {
       report?: {
+        startTime?: number;
         fights?: WclFightNode[];
         masterData?: {
           abilities?: WclAbilityNode[];

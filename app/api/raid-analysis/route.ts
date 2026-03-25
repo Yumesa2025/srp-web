@@ -70,8 +70,9 @@ export async function GET(request: Request) {
       query($code: String!) {
         reportData {
           report(code: $code) {
+            startTime
             fights {
-              id name startTime endTime kill bossPercentage size
+              id name startTime endTime kill bossPercentage size difficulty
             }
           }
         }
@@ -104,6 +105,7 @@ export async function GET(request: Request) {
       }, { status: 502 });
     }
 
+    const reportStartTime = typeof reportNode.startTime === 'number' ? reportNode.startTime : 0;
     const raw = reportNode.fights as WclFightNode[];
     const fights: RaidFight[] = raw
       .filter(f => typeof f.kill === 'boolean' && (!f.size || f.size > 5))
@@ -115,6 +117,8 @@ export async function GET(request: Request) {
         bossPercentage: f.bossPercentage ?? null,
         startTime: f.startTime,
         endTime: f.endTime,
+        difficulty: f.difficulty,
+        fightStartedAt: reportStartTime > 0 ? reportStartTime + f.startTime : undefined,
       }));
 
     return NextResponse.json({

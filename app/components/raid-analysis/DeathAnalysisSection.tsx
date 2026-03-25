@@ -20,8 +20,8 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
           {collapsed ? '▶' : '▼'}
         </button>
         <div>
-          <h3 className="text-red-300 font-bold text-lg">💀 최초 사망 분석</h3>
-          <p className="text-sm text-gray-500 mt-0.5">전투에서 가장 먼저 사망한 최대 3명</p>
+          <h3 className="text-red-300 font-bold text-2xl">💀 최초 사망 분석</h3>
+          <p className="text-xl text-gray-500 mt-0.5">전투에서 가장 먼저 사망한 최대 3명</p>
         </div>
       </div>
 
@@ -57,11 +57,11 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{ color: getClassColor(death.className) }}
-                          className="font-bold text-base hover:underline transition-colors leading-tight block truncate"
+                          className="font-bold text-xl hover:underline transition-colors leading-tight block truncate"
                         >
                           {death.playerName}
                         </a>
-                        <p className="text-gray-500 text-sm">{death.timeStr}</p>
+                        <p className="text-gray-500 text-xl">{death.timeStr}</p>
                       </div>
                     </div>
                   </div>
@@ -81,8 +81,8 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                   <>
                     {/* 사망 원인 */}
                     <div>
-                      <p className="text-gray-500 text-xs mb-1">사망 원인</p>
-                      <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-red-900/40 border border-red-800/40 text-red-300 text-sm rounded-md font-semibold">
+                      <p className="text-gray-500 text-base mb-1">사망 원인</p>
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-red-900/40 border border-red-800/40 text-red-300 text-xl rounded-md font-semibold">
                         {death.causeIconUrl && <img src={death.causeIconUrl} alt="" className="w-4 h-4 rounded shrink-0" />}
                         {death.cause}
                       </span>
@@ -91,12 +91,12 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                     {/* 직전 5초 받은 피해 */}
                     {death.incomingDamage && (
                       <div>
-                        <p className="text-gray-500 text-xs mb-1">
+                        <p className="text-gray-500 text-base mb-1">
                           직전 5초 받은 피해 <span className="text-orange-400 font-bold">{(death.incomingDamage.totalDamage / 1000).toFixed(0)}K</span>
                         </p>
                         <div className="flex flex-wrap gap-1">
                           {death.incomingDamage.topHits.map(h => (
-                            <span key={h.ability} className="px-2 py-0.5 bg-orange-900/30 border border-orange-800/40 text-orange-300 text-xs rounded-md whitespace-nowrap">
+                            <span key={h.ability} className="px-2 py-0.5 bg-orange-900/30 border border-orange-800/40 text-orange-300 text-base rounded-md whitespace-nowrap">
                               {h.ability} <span className="font-bold">{(h.amount / 1000).toFixed(0)}K</span>
                             </span>
                           ))}
@@ -106,17 +106,17 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
 
                     {/* 생존기 */}
                     <div>
-                      <p className="text-gray-500 text-xs mb-1">생존기</p>
+                      <p className="text-gray-500 text-base mb-1">생존기</p>
                       {death.defensivesUsed.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {death.defensivesUsed.map(d => (
-                            <span key={d} className="px-2 py-0.5 bg-emerald-900/40 border border-emerald-700/40 text-emerald-300 text-sm rounded-md">
+                            <span key={d} className="px-2 py-0.5 bg-emerald-900/40 border border-emerald-700/40 text-emerald-300 text-xl rounded-md">
                               ✓ {d}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <span className="px-2 py-0.5 bg-gray-800 text-gray-500 text-sm rounded-md border border-gray-700">
+                        <span className="px-2 py-0.5 bg-gray-800 text-gray-500 text-xl rounded-md border border-gray-700">
                           사용 없음
                         </span>
                       )}
