@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '../utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 
 function getString(formData: FormData, key: string): string | null {
@@ -58,4 +59,29 @@ export async function signout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
+}
+
+export async function deleteAccount(): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: '로그인 상태가 아닙니다.' }
+
+  const userId = user.id
+
+  // 1. 사용자 데이터 삭제
+  await supabase.from('raid_sessions').delete().eq('user_id', userId)
+  await supabase.from('rosters').delete().eq('user_id', userId)
+
+  // 2. auth.users 삭제 (service_role 필요)
+  const adminClient = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+  const { error } = await adminClient.auth.admin.deleteUser(userId)
+  if (error) return { error: '계정 삭제에 실패했습니다.' }
+
+  // 3. 세션 종료
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  return {}
 }

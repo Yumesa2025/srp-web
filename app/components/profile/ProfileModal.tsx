@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/app/utils/supabase/client";
 import { loadRosters, deleteRoster } from "@/app/actions/roster";
+import { deleteAccount } from "@/app/actions/auth";
 import DiscordWebhookSettings from "@/app/components/discord/DiscordWebhookSettings";
 
 type ProfileTab = "rosters" | "market" | "settings";
@@ -58,6 +59,24 @@ export default function ProfileModal({ user, onClose }: Props) {
   const [sessions, setSessions]     = useState<RaidSession[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
   const [confirmRosterId, setConfirmRosterId] = useState<string | null>(null);
+
+  // 회원 탈퇴
+  const [deleteStep, setDeleteStep]     = useState<0 | 1>(0);
+  const [isDeleting, setIsDeleting]     = useState(false);
+  const [deleteError, setDeleteError]   = useState("");
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    setDeleteError("");
+    const result = await deleteAccount();
+    if (result.error) {
+      setDeleteError(result.error);
+      setIsDeleting(false);
+      setDeleteStep(0);
+    } else {
+      onClose();
+    }
+  };
 
   // 닉네임 변경
   const [isEditingName, setIsEditingName] = useState(false);
@@ -373,8 +392,45 @@ export default function ProfileModal({ user, onClose }: Props) {
               )}
               {/* 설정 탭 */}
               {tab === "settings" && (
-                <div>
+                <div className="space-y-6">
                   <DiscordWebhookSettings />
+
+                  {/* 회원 탈퇴 */}
+                  <div className="border-t border-gray-700/60 pt-5">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">위험 구역</p>
+                    {deleteStep === 0 ? (
+                      <button
+                        onClick={() => setDeleteStep(1)}
+                        className="px-4 py-2 bg-gray-800 hover:bg-red-900/30 border border-gray-700 hover:border-red-700/50 text-gray-400 hover:text-red-400 text-sm font-semibold rounded-xl transition-colors"
+                      >
+                        회원 탈퇴
+                      </button>
+                    ) : (
+                      <div className="p-4 bg-red-900/20 border border-red-700/40 rounded-xl space-y-3">
+                        <p className="text-red-300 text-sm font-bold">정말로 탈퇴하시겠습니까?</p>
+                        <p className="text-gray-400 text-xs leading-relaxed">
+                          파티원 명단, 공대 거래 기록 등 모든 데이터가 <span className="text-red-400 font-bold">영구 삭제</span>되며 복구할 수 없습니다.
+                        </p>
+                        {deleteError && <p className="text-red-400 text-xs">{deleteError}</p>}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleDeleteAccount}
+                            disabled={isDeleting}
+                            className="px-4 py-2 bg-red-700 hover:bg-red-600 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition-colors"
+                          >
+                            {isDeleting ? "삭제 중..." : "탈퇴 확인"}
+                          </button>
+                          <button
+                            onClick={() => { setDeleteStep(0); setDeleteError(""); }}
+                            disabled={isDeleting}
+                            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors"
+                          >
+                            취소
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </>
