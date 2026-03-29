@@ -3,15 +3,20 @@
 import { createClient } from '../utils/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { validateSignupPassword } from '../lib/passwordPolicy'
 
-function getString(formData: FormData, key: string): string | null {
+function getString(formData: FormData, key: string, trim = true): string | null {
   const value = formData.get(key);
-  return typeof value === 'string' ? value.trim() : null;
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  return trim ? value.trim() : value;
 }
 
 export async function login(formData: FormData) {
   const email = getString(formData, 'email');
-  const password = getString(formData, 'password');
+  const password = getString(formData, 'password', false);
 
   if (!email || !password) {
     return { error: '이메일과 비밀번호를 모두 입력해주세요.' }
@@ -34,10 +39,15 @@ export async function login(formData: FormData) {
 
 export async function signup(formData: FormData) {
   const email = getString(formData, 'email');
-  const password = getString(formData, 'password');
+  const password = getString(formData, 'password', false);
 
   if (!email || !password) {
     return { error: '이메일과 비밀번호를 모두 입력해주세요.' }
+  }
+
+  const passwordValidationError = validateSignupPassword(password);
+  if (passwordValidationError) {
+    return { error: passwordValidationError }
   }
 
   const supabase = await createClient()

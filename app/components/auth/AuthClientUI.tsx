@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useTransition, useEffect, useRef } from 'react';
+import { useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { login, signup, signout } from '@/app/actions/auth';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/app/utils/supabase/client';
 import ProfileModal from '@/app/components/profile/ProfileModal';
+import type { ProfileSummary } from '@/app/types/profile';
 
 const supabase = createClient();
 
-export default function AuthClientUI({ user }: { user: User | null }) {
+export default function AuthClientUI({ user, profile }: { user: User | null; profile: ProfileSummary | null }) {
   const [isAuthOpen,    setIsAuthOpen]    = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoginMode,   setIsLoginMode]   = useState(true);
@@ -17,11 +18,9 @@ export default function AuthClientUI({ user }: { user: User | null }) {
   const [isOAuthPending, setIsOAuthPending] = useState(false);
   const [errorMsg,   setErrorMsg]   = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
 
-  const avatarUrl   = (user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture) as string | undefined;
-  const displayName = (user?.user_metadata?.name ?? user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '사용자') as string;
+  const avatarUrl = profile?.avatar_url ?? undefined;
+  const displayName = profile?.display_name ?? user?.email?.split('@')[0] ?? '사용자';
 
   const handleSignOut = () => {
     startTransition(async () => { await signout(); });
@@ -33,6 +32,16 @@ export default function AuthClientUI({ user }: { user: User | null }) {
     setSuccessMsg('');
     const form = e.currentTarget;
     const formData = new FormData(form);
+
+    if (!isLoginMode) {
+      const password = formData.get('password');
+      const passwordConfirm = formData.get('passwordConfirm');
+
+      if (typeof password === 'string' && typeof passwordConfirm === 'string' && password !== passwordConfirm) {
+        setErrorMsg('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
+        return;
+      }
+    }
 
     startTransition(async () => {
       const result = isLoginMode ? await login(formData) : await signup(formData);
@@ -101,8 +110,8 @@ export default function AuthClientUI({ user }: { user: User | null }) {
         </div>
 
         {/* 프로필 모달 */}
-        {isProfileOpen && mounted && createPortal(
-          <ProfileModal user={user} onClose={() => setIsProfileOpen(false)} />,
+        {isProfileOpen && typeof document !== 'undefined' && createPortal(
+          <ProfileModal user={user} profile={profile} onClose={() => setIsProfileOpen(false)} />,
           document.body
         )}
       </>
@@ -127,7 +136,7 @@ export default function AuthClientUI({ user }: { user: User | null }) {
         </button>
       </div>
 
-      {isAuthOpen && mounted && createPortal(
+      {isAuthOpen && typeof document !== 'undefined' && createPortal(
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) setIsAuthOpen(false); }}
@@ -190,7 +199,24 @@ export default function AuthClientUI({ user }: { user: User | null }) {
                   placeholder="비밀번호 입력"
                   className="w-full px-4 py-3 bg-gray-800 border-2 border-transparent focus:border-cyan-500 rounded-xl text-white focus:outline-none transition-all text-sm"
                 />
+                {!isLoginMode && (
+                  <p className="mt-2 text-xs leading-relaxed text-gray-500">
+                    10자 이상, 영문 대문자/소문자, 숫자, 특수문자를 각각 1자 이상 포함해야 합니다.
+                  </p>
+                )}
               </div>
+              {!isLoginMode && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">비밀번호 확인</label>
+                  <input
+                    type="password"
+                    name="passwordConfirm"
+                    required
+                    placeholder="비밀번호 다시 입력"
+                    className="w-full px-4 py-3 bg-gray-800 border-2 border-transparent focus:border-cyan-500 rounded-xl text-white focus:outline-none transition-all text-sm"
+                  />
+                </div>
+              )}
               <button
                 type="submit" disabled={isPending}
                 className="mt-2 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-gray-700 disabled:to-gray-700 disabled:text-gray-400 text-white font-bold rounded-xl transition-all shadow-lg text-sm"

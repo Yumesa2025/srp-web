@@ -6,7 +6,9 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/app/utils/supabase/client";
 import { loadRosters, deleteRoster } from "@/app/actions/roster";
 import { deleteAccount } from "@/app/actions/auth";
+import { updateProfile } from "@/app/actions/profile";
 import DiscordWebhookSettings from "@/app/components/discord/DiscordWebhookSettings";
+import type { ProfileSummary } from "@/app/types/profile";
 
 type ProfileTab = "rosters" | "market" | "settings";
 
@@ -47,10 +49,11 @@ function previewNames(content: string) {
 
 interface Props {
   user: User;
+  profile: ProfileSummary | null;
   onClose: () => void;
 }
 
-export default function ProfileModal({ user, onClose }: Props) {
+export default function ProfileModal({ user, profile, onClose }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router   = useRouter();
 
@@ -85,8 +88,8 @@ export default function ProfileModal({ user, onClose }: Props) {
   const [nameError, setNameError]         = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const avatarUrl   = (user.user_metadata?.avatar_url ?? user.user_metadata?.picture) as string | undefined;
-  const displayName = (user.user_metadata?.name ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자") as string;
+  const avatarUrl = profile?.avatar_url ?? undefined;
+  const displayName = profile?.display_name ?? user.email?.split("@")[0] ?? "사용자";
   const joinDate    = formatDate(user.created_at);
 
 
@@ -96,9 +99,9 @@ export default function ProfileModal({ user, onClose }: Props) {
     if (trimmed === displayName) { setIsEditingName(false); return; }
     setNameSaving(true);
     setNameError("");
-    const { error } = await supabase.auth.updateUser({ data: { name: trimmed, full_name: trimmed } });
+    const { error } = await updateProfile(trimmed);
     setNameSaving(false);
-    if (error) { setNameError("저장에 실패했습니다."); return; }
+    if (error) { setNameError(error); return; }
     setIsEditingName(false);
     router.refresh();
   };
