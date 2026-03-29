@@ -95,7 +95,8 @@ export async function deleteAccount(): Promise<{ error?: string }> {
     await supabase.auth.signOut()
     revalidatePath('/', 'layout')
     return {}
-  } catch {
-    return { error: '계정 삭제 중 오류가 발생했습니다.' }
+  } catch (e) {
+    console.error('[deleteAccount] 예외 발생:', e)
+    return { error: `계정 삭제 중 오류가 발생했습니다: ${e instanceof Error ? e.message : String(e)}` }
   }
 }
