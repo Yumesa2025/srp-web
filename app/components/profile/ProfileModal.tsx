@@ -78,6 +78,7 @@ export default function ProfileModal({ user, profile, onClose }: Props) {
         setDeleteStep(0);
       } else {
         onClose();
+        window.location.href = '/';
       }
     } catch {
       setDeleteError("계정 삭제 중 오류가 발생했습니다.");
@@ -155,7 +156,6 @@ export default function ProfileModal({ user, profile, onClose }: Props) {
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm pointer-events-auto"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col bg-gray-900 border border-gray-700 rounded-3xl shadow-2xl overflow-hidden">
 
@@ -184,7 +184,7 @@ export default function ProfileModal({ user, profile, onClose }: Props) {
               </div>
             )}
 
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 pr-10">
               {/* 닉네임 행 */}
               {isEditingName ? (
                 <div className="flex flex-col gap-1.5">
