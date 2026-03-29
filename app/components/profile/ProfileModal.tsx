@@ -71,13 +71,19 @@ export default function ProfileModal({ user, profile, onClose }: Props) {
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     setDeleteError("");
-    const result = await deleteAccount();
-    if (result.error) {
-      setDeleteError(result.error);
-      setIsDeleting(false);
+    try {
+      const result = await deleteAccount();
+      if (result.error) {
+        setDeleteError(result.error);
+        setDeleteStep(0);
+      } else {
+        onClose();
+      }
+    } catch {
+      setDeleteError("계정 삭제 중 오류가 발생했습니다.");
       setDeleteStep(0);
-    } else {
-      onClose();
+    } finally {
+      setIsDeleting(false);
     }
   };
 
