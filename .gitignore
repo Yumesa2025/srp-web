@@ -27,6 +27,10 @@
 .vs/
 *.pem
 
+# Claude / Codex 로컬 작업 파일
+.claude/
+.codex/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
