@@ -20,7 +20,7 @@ export default function AuthClientUI({ user, profile }: { user: User | null; pro
   const [successMsg, setSuccessMsg] = useState('');
 
   const avatarUrl = profile?.avatar_url ?? undefined;
-  const displayName = profile?.display_name ?? user?.email?.split('@')[0] ?? '사용자';
+  const displayName = profile?.display_name || user?.email?.split('@')[0] || '사용자';
 
   const handleSignOut = () => {
     startTransition(async () => { await signout(); });

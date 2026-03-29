@@ -89,7 +89,7 @@ export default function ProfileModal({ user, profile, onClose }: Props) {
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const avatarUrl = profile?.avatar_url ?? undefined;
-  const displayName = profile?.display_name ?? user.email?.split("@")[0] ?? "사용자";
+  const displayName = profile?.display_name || user.email?.split("@")[0] || "사용자";
   const joinDate    = formatDate(user.created_at);
 
 
