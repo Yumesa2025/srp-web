@@ -10,6 +10,7 @@ import ErrorBoundary from "@/app/components/ErrorBoundary";
 import RosterTab from "@/app/components/roster/RosterTab";
 import RaidAnalysisTab from "@/app/components/raid-analysis/RaidAnalysisTab";
 import TutorialModal from "@/app/components/tutorial/TutorialModal";
+import HelpTab from "@/app/components/help/HelpTab";
 
 import { guessRole } from "@/app/lib/raidUtils";
 import { useAnalytics } from "@/app/hooks/useAnalytics";
@@ -37,10 +38,6 @@ export default function Home() {
   }
 
   const handleTabChange = (tab: MainTab) => {
-    if (tab === 'HELP') {
-      setTutorialOpen(true);
-      return;
-    }
     setActiveTab(tab);
     analytics.trackTabChange(tab);
   };
@@ -225,6 +222,12 @@ export default function Home() {
         <div className={activeTab === "RAID_AI_ANALYSIS" ? "" : "hidden"}>
           <ErrorBoundary>
             <RaidAnalysisTab />
+          </ErrorBoundary>
+        </div>
+
+        <div className={activeTab === "HELP" ? "" : "hidden"}>
+          <ErrorBoundary>
+            <HelpTab onOpenTutorial={() => setTutorialOpen(true)} />
           </ErrorBoundary>
         </div>
 
