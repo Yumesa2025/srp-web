@@ -42,7 +42,7 @@ body {
 
 .srp-tour-popover .driver-popover-description {
   color: #d1d5db;
-  font-size: 13px;
+  font-size: 26px;
   line-height: 1.6;
   margin-top: 6px;
 }
@@ -93,6 +93,15 @@ body {
   color: #f9fafb;
 }
 
+/* 오버레이는 약간 밝게 유지 */
 .driver-overlay {
-  background: rgba(0, 0, 0, 0.75) !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+}
+
+/* 하이라이트된 요소에 cyan 링 효과 추가 */
+.driver-active-element {
+  outline: 3px solid rgba(34, 211, 238, 0.9) !important;
+  outline-offset: 4px !important;
+  box-shadow: 0 0 0 6px rgba(34, 211, 238, 0.15), 0 0 24px rgba(34, 211, 238, 0.25) !important;
+  border-radius: 8px !important;
 }

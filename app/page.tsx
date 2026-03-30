@@ -31,7 +31,7 @@ export default function Home() {
 
   const analytics = useAnalytics();
   const { shouldShow, markSeen } = useTutorialFirstVisit();
-  const { startTour, hasSeenTab } = useTour();
+  const { startTour, hasSeenTab, resetAllTours } = useTour();
 
   // 첫 방문 시 웰컴 팝업 오픈
   if (shouldShow && !welcomeOpen) {
@@ -239,7 +239,13 @@ export default function Home() {
 
         <div className={activeTab === "HELP" ? "" : "hidden"}>
           <ErrorBoundary>
-            <HelpTab onOpenTutorial={() => startTour(activeTab)} />
+            <HelpTab onOpenTutorial={() => {
+              // 모든 탭 seen 초기화 → ROSTER로 이동 → 투어 시작
+              // (이후 거래/분석 탭 첫 방문 시에도 투어 자동 재실행)
+              resetAllTours();
+              handleTabChange("ROSTER");
+              setTimeout(() => startTour("ROSTER"), 300);
+            }} />
           </ErrorBoundary>
         </div>
 
