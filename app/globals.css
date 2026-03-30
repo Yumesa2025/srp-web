@@ -93,16 +93,15 @@ body {
   color: #f9fafb;
 }
 
-/* 오버레이 어둠 완화 */
+/* overlay를 매우 어둡게 → 강조 영역(원래 밝기)과 대비 극대화 */
 .driver-overlay {
-  background: rgba(0, 0, 0, 0.5) !important;
+  background: rgba(0, 0, 0, 0.88) !important;
 }
 
-/* 하이라이트된 요소 - 밝기 강제 증가 + cyan 링 */
+/* 강조 영역은 brightness 건드리지 않고 cyan 링으로만 경계 표시 */
 .driver-active-element {
-  filter: brightness(2) !important;
-  outline: 4px solid rgba(34, 211, 238, 1) !important;
-  outline-offset: 6px !important;
-  box-shadow: 0 0 0 8px rgba(34, 211, 238, 0.3), 0 0 40px rgba(34, 211, 238, 0.5) !important;
+  outline: 3px solid rgba(34, 211, 238, 0.9) !important;
+  outline-offset: 5px !important;
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.4) !important;
   border-radius: 8px !important;
 }
