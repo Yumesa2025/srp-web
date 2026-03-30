@@ -10,6 +10,7 @@ import ErrorBoundary from "@/app/components/ErrorBoundary";
 import RosterTab from "@/app/components/roster/RosterTab";
 import RaidAnalysisTab from "@/app/components/raid-analysis/RaidAnalysisTab";
 import TutorialModal from "@/app/components/tutorial/TutorialModal";
+import WelcomeModal from "@/app/components/tutorial/WelcomeModal";
 import HelpTab from "@/app/components/help/HelpTab";
 
 import { guessRole } from "@/app/lib/raidUtils";
@@ -26,16 +27,22 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<MainTab>("ROSTER");
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
   const [skippedDuplicates, setSkippedDuplicates] = useState<string[]>([]);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
   const analytics = useAnalytics();
   const { shouldShow, markSeen } = useTutorialFirstVisit();
 
-  // 첫 방문 시 자동 오픈
-  if (shouldShow && !tutorialOpen) {
-    setTutorialOpen(true);
+  // 첫 방문 시 웰컴 팝업 오픈
+  if (shouldShow && !welcomeOpen && !tutorialOpen) {
+    setWelcomeOpen(true);
     markSeen();
   }
+
+  const handleWelcomeStart = () => {
+    setWelcomeOpen(false);
+    setTutorialOpen(true);
+  };
 
   const handleTabChange = (tab: MainTab) => {
     setActiveTab(tab);
@@ -230,6 +237,10 @@ export default function Home() {
             <HelpTab onOpenTutorial={() => setTutorialOpen(true)} />
           </ErrorBoundary>
         </div>
+
+        {welcomeOpen && (
+          <WelcomeModal onStart={handleWelcomeStart} />
+        )}
 
         {tutorialOpen && (
           <TutorialModal
