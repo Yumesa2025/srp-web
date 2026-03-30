@@ -9,10 +9,11 @@ import RaidMarketTab from "@/app/components/market/RaidMarketTab";
 import ErrorBoundary from "@/app/components/ErrorBoundary";
 import RosterTab from "@/app/components/roster/RosterTab";
 import RaidAnalysisTab from "@/app/components/raid-analysis/RaidAnalysisTab";
-import HelpTab from "@/app/components/help/HelpTab";
+import TutorialModal from "@/app/components/tutorial/TutorialModal";
 
 import { guessRole } from "@/app/lib/raidUtils";
 import { useAnalytics } from "@/app/hooks/useAnalytics";
+import { useTutorialFirstVisit } from "@/app/hooks/useTutorialFirstVisit";
 
 const CHAR_FETCH_TIMEOUT_MS = 15_000;
 const DUPLICATE_NOTICE_DURATION_MS = 5_000;
@@ -24,8 +25,25 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<MainTab>("ROSTER");
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
   const [skippedDuplicates, setSkippedDuplicates] = useState<string[]>([]);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   const analytics = useAnalytics();
+  const { shouldShow, markSeen } = useTutorialFirstVisit();
+
+  // 첫 방문 시 자동 오픈
+  if (shouldShow && !tutorialOpen) {
+    setTutorialOpen(true);
+    markSeen();
+  }
+
+  const handleTabChange = (tab: MainTab) => {
+    if (tab === 'HELP') {
+      setTutorialOpen(true);
+      return;
+    }
+    setActiveTab(tab);
+    analytics.trackTabChange(tab);
+  };
 
   const fetchRaidData = async () => {
     setIsLoading(true);
@@ -179,7 +197,7 @@ export default function Home() {
     <div className="min-h-screen p-8 bg-gray-900 text-white font-sans">
       <div className="max-w-[1400px] mx-auto">
 
-        <MainTabs activeTab={activeTab} onChange={(tab) => { setActiveTab(tab); analytics.trackTabChange(tab); }} />
+        <MainTabs activeTab={activeTab} onChange={handleTabChange} />
 
         <div className={activeTab === "ROSTER" ? "" : "hidden"}>
           <ErrorBoundary>
@@ -210,11 +228,12 @@ export default function Home() {
           </ErrorBoundary>
         </div>
 
-        <div className={activeTab === "HELP" ? "" : "hidden"}>
-          <ErrorBoundary>
-            <HelpTab />
-          </ErrorBoundary>
-        </div>
+        {tutorialOpen && (
+          <TutorialModal
+            onClose={() => setTutorialOpen(false)}
+            onNavigate={(tab) => { setActiveTab(tab); analytics.trackTabChange(tab); }}
+          />
+        )}
       </div>
     </div>
   );
