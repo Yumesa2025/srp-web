@@ -67,6 +67,7 @@ export default function ProfileModal({ user, profile, onClose }: Props) {
   const [deleteStep, setDeleteStep]     = useState<0 | 1>(0);
   const [isDeleting, setIsDeleting]     = useState(false);
   const [deleteError, setDeleteError]   = useState("");
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -77,8 +78,11 @@ export default function ProfileModal({ user, profile, onClose }: Props) {
         setDeleteError(result.error);
         setDeleteStep(0);
       } else {
-        onClose();
-        window.location.href = '/';
+        setDeleteSuccess(true);
+        setTimeout(() => {
+          onClose();
+          window.location.href = '/';
+        }, 1500);
       }
     } catch {
       setDeleteError("계정 삭제 중 오류가 발생했습니다.");
@@ -420,6 +424,9 @@ export default function ProfileModal({ user, profile, onClose }: Props) {
                         <p className="text-gray-400 text-xs leading-relaxed">
                           파티원 명단, 공대 거래 기록 등 모든 데이터가 <span className="text-red-400 font-bold">영구 삭제</span>되며 복구할 수 없습니다.
                         </p>
+                        {deleteSuccess && (
+                          <p className="text-green-400 text-sm font-bold text-center py-1">계정이 삭제되었습니다. 잠시 후 이동합니다...</p>
+                        )}
                         {deleteError && <p className="text-red-400 text-xs">{deleteError}</p>}
                         <div className="flex gap-2">
                           <button
