@@ -98,11 +98,11 @@ body {
   background: rgba(0, 0, 0, 0.5) !important;
 }
 
-/* 하이라이트된 요소 - 밝은 배경 + 강한 cyan 링 */
+/* 하이라이트된 요소 - 밝기 강제 증가 + cyan 링 */
 .driver-active-element {
+  filter: brightness(2.5) !important;
   outline: 4px solid rgba(34, 211, 238, 1) !important;
   outline-offset: 6px !important;
   box-shadow: 0 0 0 8px rgba(34, 211, 238, 0.3), 0 0 40px rgba(34, 211, 238, 0.5) !important;
   border-radius: 8px !important;
-  background-color: rgba(255, 255, 255, 0.06) !important;
 }
