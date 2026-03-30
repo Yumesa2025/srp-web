@@ -190,6 +190,7 @@ export default function RaidMarketTab() {
 
         {/* 입력 영역 */}
         <textarea
+          data-tour="market-input"
           value={ledgerInput}
           onChange={(e) => setLedgerInput(e.target.value)}
           placeholder={"애드온 장부를 붙여넣으세요\n형식: 아이템ID;낙찰자;골드\n예: 264183;아크로;10000|260650;발리안;8000"}
@@ -199,6 +200,7 @@ export default function RaidMarketTab() {
 
         <div className="flex flex-wrap gap-2.5 mt-3">
           <button
+            data-tour="market-load-btn"
             onClick={() => processLedger()}
             className="px-5 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-colors text-sm shadow"
           >
@@ -302,7 +304,7 @@ export default function RaidMarketTab() {
             {/* ── 계산기 + 저장 ── */}
             <div className="flex flex-col gap-4">
               {/* 계산기 */}
-              <div className="bg-gray-900 rounded-xl border border-gray-700 p-4">
+              <div data-tour="market-calculator" className="bg-gray-900 rounded-xl border border-gray-700 p-4">
                 <h3 className="text-yellow-300 font-bold text-xl mb-4 flex items-center gap-1.5">
                   🧮 분배 계산기
                 </h3>
@@ -371,16 +373,18 @@ export default function RaidMarketTab() {
 
         {/* 저장 패널 (로그인 + 아이템 있을 때) */}
         {storage.isLoggedIn && ledgerItems.length > 0 && (
-          <RaidSavePanel
-            raidSize={raidSize}
-            raidExpense={raidExpense}
-            totalGold={payout.totalGold}
-            perPerson={payout.perPerson}
-            rawInput={ledgerInput}
-            isSaving={storage.isSaving}
-            onSave={storage.saveSession}
-            items={saveItems}
-          />
+          <div data-tour="market-save">
+            <RaidSavePanel
+              raidSize={raidSize}
+              raidExpense={raidExpense}
+              totalGold={payout.totalGold}
+              perPerson={payout.perPerson}
+              rawInput={ledgerInput}
+              isSaving={storage.isSaving}
+              onSave={storage.saveSession}
+              items={saveItems}
+            />
+          </div>
         )}
 
         {/* 로그인 유도 (비로그인) */}
@@ -395,13 +399,15 @@ export default function RaidMarketTab() {
 
       {/* ── 누적 기록 섹션 (로그인 시) ───────────────────────── */}
       {storage.isLoggedIn && (
-        <RaidHistorySection
-          sessions={storage.sessions}
-          isLoading={storage.isLoading}
-          onLoadSession={handleLoadSession}
-          onDeleteSession={storage.deleteSession}
-          onFetchAllItems={storage.fetchAllItems}
-        />
+        <div data-tour="market-history">
+          <RaidHistorySection
+            sessions={storage.sessions}
+            isLoading={storage.isLoading}
+            onLoadSession={handleLoadSession}
+            onDeleteSession={storage.deleteSession}
+            onFetchAllItems={storage.fetchAllItems}
+          />
+        </div>
       )}
     </div>
   );

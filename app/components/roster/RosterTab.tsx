@@ -134,16 +134,18 @@ export default function RosterTab({
       </div>
 
       {/* 파티원 명단 입력 */}
-      <div className="mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+      <div data-tour="roster-input" className="mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
         <div className="flex justify-between items-start gap-4 mb-2">
           <label className="block text-gray-300 font-semibold">
             <span className="text-lg font-bold">1. 파티원 명단 입력</span>
             <span className="text-gray-500 text-sm font-normal block mt-1">(이름-서버명 한 줄에 하나씩)</span>
           </label>
-          {isLoggedIn
-            ? <RosterManager currentText={inputText} onSelectRoster={onInputTextChange} />
-            : <span className="text-xs text-gray-500">명단 저장소는 로그인 후 이용 가능합니다.</span>
-          }
+          <div data-tour="roster-manager">
+            {isLoggedIn
+              ? <RosterManager currentText={inputText} onSelectRoster={onInputTextChange} />
+              : <span className="text-xs text-gray-500">명단 저장소는 로그인 후 이용 가능합니다.</span>
+            }
+          </div>
         </div>
         <textarea
           className="w-full p-4 bg-gray-900 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500 resize-none"
@@ -175,7 +177,7 @@ export default function RosterTab({
       </div>
 
       {/* 인원 카운터 + 구성 복사 */}
-      <div className="mb-3 flex justify-end items-center gap-2">
+      <div data-tour="roster-actions" className="mb-3 flex justify-end items-center gap-2">
         {players.length > 0 && isLoggedIn && (
           <DiscordSendButton
             label="Discord 전송"
@@ -257,7 +259,7 @@ export default function RosterTab({
       </div>
 
       {/* 미분류 대기소 */}
-      <div className="mb-6">
+      <div data-tour="roster-unassigned" className="mb-6">
         <RaidZone
           role="UNASSIGNED" title="❓ 미분류 대기소" bgColor="bg-gray-800/50"
           players={players} onDragOver={onDragOver} onDrop={onDrop} onDragStart={onDragStart}

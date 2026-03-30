@@ -9,13 +9,13 @@ import RaidMarketTab from "@/app/components/market/RaidMarketTab";
 import ErrorBoundary from "@/app/components/ErrorBoundary";
 import RosterTab from "@/app/components/roster/RosterTab";
 import RaidAnalysisTab from "@/app/components/raid-analysis/RaidAnalysisTab";
-import TutorialModal from "@/app/components/tutorial/TutorialModal";
 import WelcomeModal from "@/app/components/tutorial/WelcomeModal";
 import HelpTab from "@/app/components/help/HelpTab";
 
 import { guessRole } from "@/app/lib/raidUtils";
 import { useAnalytics } from "@/app/hooks/useAnalytics";
 import { useTutorialFirstVisit } from "@/app/hooks/useTutorialFirstVisit";
+import { useTour } from "@/app/hooks/useTour";
 
 const CHAR_FETCH_TIMEOUT_MS = 15_000;
 const DUPLICATE_NOTICE_DURATION_MS = 5_000;
@@ -28,25 +28,30 @@ export default function Home() {
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
   const [skippedDuplicates, setSkippedDuplicates] = useState<string[]>([]);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   const analytics = useAnalytics();
   const { shouldShow, markSeen } = useTutorialFirstVisit();
+  const { startTour, hasSeenTab } = useTour();
 
   // 첫 방문 시 웰컴 팝업 오픈
-  if (shouldShow && !welcomeOpen && !tutorialOpen) {
+  if (shouldShow && !welcomeOpen) {
     setWelcomeOpen(true);
     markSeen();
   }
 
   const handleWelcomeStart = () => {
     setWelcomeOpen(false);
-    setTutorialOpen(true);
+    // 웰컴 팝업에서 시작 → ROSTER 탭 투어 시작
+    setTimeout(() => startTour("ROSTER"), 300);
   };
 
   const handleTabChange = (tab: MainTab) => {
     setActiveTab(tab);
     analytics.trackTabChange(tab);
+    // 해당 탭을 처음 방문하는 경우 투어 자동 시작
+    if (!hasSeenTab(tab)) {
+      setTimeout(() => startTour(tab), 300);
+    }
   };
 
   const fetchRaidData = async () => {
@@ -234,19 +239,12 @@ export default function Home() {
 
         <div className={activeTab === "HELP" ? "" : "hidden"}>
           <ErrorBoundary>
-            <HelpTab onOpenTutorial={() => setTutorialOpen(true)} />
+            <HelpTab onOpenTutorial={() => startTour(activeTab)} />
           </ErrorBoundary>
         </div>
 
         {welcomeOpen && (
           <WelcomeModal onStart={handleWelcomeStart} />
-        )}
-
-        {tutorialOpen && (
-          <TutorialModal
-            onClose={() => setTutorialOpen(false)}
-            onNavigate={(tab) => { setActiveTab(tab); analytics.trackTabChange(tab); }}
-          />
         )}
       </div>
     </div>

@@ -128,7 +128,7 @@ export default function RaidAnalysisTab() {
   return (
     <div className="space-y-6">
       {/* ── 헤더 입력 ──────────────────────────────────────────── */}
-      <div className="p-6 bg-gray-800 rounded-xl border border-gray-700 shadow-lg">
+      <div data-tour="analysis-input" className="p-6 bg-gray-800 rounded-xl border border-gray-700 shadow-lg">
         <div className="mb-4">
           <h2 className="text-xl font-bold text-cyan-400 flex items-center gap-2">
             🔍 공대 분석
