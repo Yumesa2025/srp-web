@@ -157,7 +157,7 @@ export function useTour() {
       doneBtnText: '완료',
       showButtons: ['next', 'previous', 'close'],
       overlayColor: '#000',
-      overlayOpacity: 0.85,
+      overlayOpacity: 0.40,
       stagePadding: 6,
       stageRadius: 8,
       popoverClass: 'srp-tour-popover',

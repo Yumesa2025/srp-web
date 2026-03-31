@@ -93,9 +93,9 @@ body {
   color: #f9fafb;
 }
 
-/* overlay 어둡게 → 강조 영역과 대비 생성 */
+/* SVG spotlight 구멍 안쪽은 원래 화면 그대로 유지 */
 .driver-overlay {
-  background: rgba(0, 0, 0, 0.85) !important;
+  background: transparent !important;
 }
 
 /* 강조 영역의 원래 대비를 유지하고 외곽선/glow로만 spotlight 효과를 준다 */
