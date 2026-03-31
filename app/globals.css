@@ -30,35 +30,35 @@ body {
 .srp-tour-popover.driver-popover {
   background-color: #111827;
   border: 1px solid #374151;
-  border-radius: 17px;
+  border-radius: 12px;
   color: #f9fafb;
-  max-width: 448px;
-  padding: 22px;
+  max-width: 314px;
+  padding: 15px;
 }
 
 .srp-tour-popover .driver-popover-title {
   color: #22d3ee;
-  font-size: 21px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .srp-tour-popover .driver-popover-description {
   color: #d1d5db;
-  font-size: 27px;
+  font-size: 19px;
   line-height: 1.6;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .srp-tour-popover .driver-popover-progress-text {
   color: #6b7280;
-  font-size: 17px;
+  font-size: 12px;
 }
 
 .srp-tour-popover .driver-popover-footer {
-  margin-top: 17px;
+  margin-top: 12px;
 }
 
-/* 이전/다음/완료 버튼: 기본 대비 1.7배 */
+/* 이전/다음/완료 버튼 */
 .srp-tour-popover .driver-popover-prev-btn,
 .srp-tour-popover .driver-popover-next-btn,
 .srp-tour-popover .driver-popover-done-btn {
@@ -66,9 +66,9 @@ body {
   color: #fff;
   border: none;
   border-radius: 8px;
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 700;
-  padding: 10px 24px;
+  padding: 7px 17px;
   cursor: pointer;
   text-shadow: none;
 }
@@ -100,7 +100,7 @@ body {
 
 .srp-tour-popover .driver-popover-close-btn {
   color: #6b7280;
-  font-size: 22px;
+  font-size: 15px;
 }
 
 .srp-tour-popover .driver-popover-close-btn:hover {
