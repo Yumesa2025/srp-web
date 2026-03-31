@@ -171,8 +171,9 @@ export function useTour() {
       },
       onDestroyStarted: () => {
         const elapsed = Date.now() - startTime;
-        // 2초 이내 + X 버튼이 아닌 경우(overlay 클릭) → 차단
-        if (elapsed < 2000 && !intentionalClose) return;
+        const isLastStep = driverObj.isLastStep?.() ?? false;
+        // 2초 이내 + X/완료 버튼이 아닌 경우(overlay 클릭) → 차단
+        if (elapsed < 2000 && !intentionalClose && !isLastStep) return;
         markTabSeen(tab);
         driverObj.destroy();
       },
