@@ -12,19 +12,35 @@ export default function WelcomeModal({ onStart }: Props) {
       <div className="w-full max-w-2xl bg-gray-900 border border-gray-700 rounded-3xl shadow-2xl overflow-hidden">
 
         {/* 텍스트 영역 */}
-        <div className="px-14 pt-10 pb-12 flex flex-col gap-8">
+        <div className="px-14 pt-10 pb-12 flex flex-col gap-6">
+
           {/* 앱 이름 */}
-          <div>
-            <h2 className="text-white font-bold text-4xl leading-snug">
-              Smart Raid Planner
-            </h2>
-            <p className="text-gray-400 text-xl mt-4 leading-relaxed">
+          <h2 className="text-cyan-400 font-bold text-4xl leading-snug">
+            Smart Raid Planner
+          </h2>
+
+          {/* 한줄 설명 */}
+          <p className="text-gray-300 text-lg leading-relaxed">
+            공대 명단 구성, 골드 정산, 전투 분석 도구.
+          </p>
+
+          {/* 애드온 안내 + 다운로드 */}
+          <div className="flex flex-col gap-2">
+            <p className="text-gray-400 text-base leading-relaxed">
               Smart Raid Plan 건전한 피드백 애드온이 필요합니다.
             </p>
+            <a
+              href="https://www.curseforge.com/wow/addons/smart-raid-plan"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="self-start px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-lg transition-colors text-sm"
+            >
+              CurseForge로 다운하러가기 ↗
+            </a>
           </div>
 
           {/* 튜토리얼 위치 안내 */}
-          <p className="text-gray-600 text-base leading-relaxed">
+          <p className="text-gray-600 text-sm leading-relaxed">
             튜토리얼은 상단 <span className="text-gray-500 font-semibold">도움말</span> 탭 → <span className="text-gray-500 font-semibold">회원</span> 섹션에서 언제든 다시 확인할 수 있습니다.
           </p>
 
