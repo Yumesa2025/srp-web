@@ -1,144 +1,140 @@
-# SRP Web (WOW Raid Planner & Log Analyzer)
+# Smart Raid Planner (SRP)
 
-SRP Web은 월드 오브 워크래프트(World of Warcraft) 공격대(Raid) 운영 및 분석을 돕기 위해 개발된 Next.js 기반의 웹 애플리케이션입니다. 
+World of Warcraft 레이드 공대장을 위한 올인원 관리 도구.
+공대 명단 구성, 골드 정산, 전투 분석을 한 곳에서.
 
-주요 기능으로 WCL(Warcraft Logs) 데이터를 불러와 공대 힐러 생존기 택틱을 AI로 짜주고, 실패한 전투 로그를 분석하며, 인게임 애드온 데이터를 통한 전리품/골드 정산 기능을 제공합니다.
-
-## 🚀 주요 기능 (Features)
-
-1. **AI 기반 택틱 자동 생성**: WCL 로그 및 타임라인을 기반으로 보스 스킬 스케줄을 분석하고 힐러의 생존기(쿨기)를 자동으로 최적 배분합니다.
-2. **트라이 로그 AI 분석**: 실패한 트라이의 문제점을 요약하고, 주요 사망 원인, 쿨기 누락, 소모품 사용 패턴, 딜/힐 추이 등을 분석합니다.
-3. **시장 정산 (Raid Market)**: 인게임 애드온 장부 데이터를 붙여넣기 하여 파티원별 분배금과 수수료를 자동으로 계산합니다.
-4. **유저 인증 (Supabase)**: 이메일 기반 로그인 및 회원가입 기능이 탑재되어 있습니다.
+> **베타 서비스** · [healthy-feedback.com](https://healthy-feedback.com)
 
 ---
 
-## 🛠 기술 스택 (Tech Stack)
+## 주요 기능
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Authentication**: Supabase SSR
-- **AI Integration**: Minimax API
-- **External API**: Warcraft Logs v2 API, Blizzard Battle.net API
-- **Deployment**: Cloudflare Workers (OpenNext)
+| 탭 | 설명 |
+|----|------|
+| **파티원 명단** | 애드온 데이터 붙여넣기 → 캐릭터 자동 조회 → 역할 드래그앤드롭 배치 → Discord 전송 |
+| **공대거래** | 아이템/골드 장부 입력 → 거래 내역 파싱 → 1인당 분배금 자동 계산 → 회차별 저장 |
+| **공대분석** | WarcraftLogs URL 입력 → DPS 그래프, 사망 분석, 방어 스킬 사용 현황, 소모품 분석 |
+| **도움말** | 기능 안내 및 투어 튜토리얼 |
 
----
-
-## 📂 폴더 구조 (Directory Structure)
-
-프로젝트의 핵심 비즈니스 로직과 UI 컴포넌트는 모두 `app/` 디렉토리에 위치해 있습니다.
-
-```text
-📦 srp-web
- ┣ 📂 app
- ┃ ┣ 📂 actions       # Supabase 로그인을 위한 서버 액션 (auth.ts)
- ┃ ┣ 📂 api           # 외부 API 통신을 위한 Next.js Route Handlers
- ┃ ┃ ┣ 📂 ai          # Minimax 연동 (택틱 생성, 로그 분석)
- ┃ ┃ ┣ 📂 character   # Blizzard API 연동 (토큰 발급 등)
- ┃ ┃ ┣ 📂 item        # 아이템 정보 조회 API
- ┃ ┃ ┣ 📂 logs        # WCL(Warcraft Logs) GraphQL API 쿼리 및 파싱
- ┃ ┃ ┣ 📂 spell       # 보스 스킬(Spell) 조회 API
- ┃ ┃ ┗ 📂 wcl         # WCL OAuth 인증 관련
- ┃ ┣ 📂 components    # 재사용 가능한 UI 컴포넌트
- ┃ ┃ ┣ 📂 auth        # 로그인/회원가입 모달 (AuthClientUI.tsx)
- ┃ ┃ ┣ 📂 clinic      # AI 로그 분석 & 피드백 탭 화면
- ┃ ┃ ┣ 📂 market      # 골드/아이템 정산 탭 화면
- ┃ ┃ ┣ 📂 tactics     # 생존기 택틱 에디터 탭 화면
- ┃ ┃ ┣ Header.tsx     # 우측 상단 글로벌 로그인 상태 헤더
- ┃ ┃ ┗ LazyImage.tsx  # Intersection Observer + Skeleton 이미지 최적화
- ┃ ┣ 📂 constants     # 앱 전반에서 사용되는 상수 (직업 색상, 스킬 ID 등)
- ┃ ┣ 📂 hooks         # Custom React Hooks (useRaidPlanner 등 상태 관리)
- ┃ ┣ 📂 lib           # 공통 유틸리티 (AI 텍스트 파싱 등)
- ┃ ┣ 📂 styles        # Tailwind/CSS 글로벌 스타일 및 공유 클래스
- ┃ ┣ 📂 types         # TypeScript 타입 정의 (API 응답 모델 등)
- ┃ ┣ 📂 utils         # 구조적 유틸리티 (Supabase SSR 클라이언트/서버 생성)
- ┃ ┣ globals.css      # 전역 CSS
- ┃ ┣ layout.tsx       # Root Layout (폰트 설정, 전역 헤더 포함)
- ┃ ┗ page.tsx         # 메인 페이지 (탭 네비게이션 및 컨트롤 패널)
-```
-
-### 특이 사항
-- **AI 모듈**: `app/api/ai/` 하위 라우트에서 Minimax 기반 택틱/분석 로직을 처리합니다.
-- **이미지 최적화**: 썸네일과 아이콘은 `LazyImage.tsx`를 통해 스켈레톤 UI와 레이지 로딩이 적용되어 있습니다.
+**애드온 필요**: [Smart Raid Plan 건전한 피드백](https://www.curseforge.com/wow/addons/smart-raid-plan)
 
 ---
 
-## ⚙️ 로컬 환경 설정 (Getting Started)
+## 기술 스택
 
-### 1. 레포지토리 클론
+- **Framework**: Next.js 16 (App Router) · TypeScript
+- **Styling**: Tailwind CSS v4
+- **Auth / DB**: Supabase SSR (`@supabase/ssr`)
+- **Deployment**: Cloudflare Workers (OpenNext v1.7)
+- **Analytics**: PostHog
+- **AI**: Minimax API (공대분석 AI 요약)
+- **External API**: Warcraft Logs v2 GraphQL · Blizzard Battle.net API
+
+---
+
+## 로컬 개발
+
+### 1. 클론 및 패키지 설치
 ```bash
-git clone https://github.com/사용자명/srp-web.git
+git clone https://github.com/Yumesa2025/srp-web.git
 cd srp-web
-```
-
-### 2. 패키지 설치
-```bash
-npm install
-# 패키지 중지 시 npm install --legacy-peer-deps 를 사용하세요.
-```
-
-### 3. 환경 변수 설정
-루트 디렉토리에 `.env.local` 파일을 생성하고 아래 변수들을 채워 넣습니다.
-```env
-# Blizzard API (아이템 및 스킬 정보용)
-BLIZZARD_CLIENT_ID=your_blizzard_client_id
-BLIZZARD_CLIENT_SECRET=your_blizzard_client_secret
-
-# Warcraft Logs API (로그 분석용)
-WCL_CLIENT_ID=your_wcl_client_id
-WCL_CLIENT_SECRET=your_wcl_client_secret
-
-# Minimax API (AI 분석 엔진용)
-MINIMAX_API_KEY=your_minimax_api_key
-
-# Supabase (유저 인증용)
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### 4. 로컬 서버 실행
-```bash
-npm run dev
-```
-브라우저에서 [http://localhost:3000](http://localhost:3000) 로 접속하여 확인합니다.
-
-### 5. Cloudflare Workers 배포 준비
-OpenNext 기반으로 Cloudflare Workers에 배포할 수 있도록 설정되어 있습니다.
-
-1. 의존성 설치
-```bash
 npm install
 ```
 
-2. 로컬 Cloudflare 개발용 환경 파일 준비
+### 2. 환경 변수 설정
 ```bash
 cp .dev.vars.example .dev.vars
 ```
+`.dev.vars`에 아래 값들을 채워넣습니다.
 
-3. 타입 생성
-```bash
-npm run cf-typegen
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Minimax (AI 분석)
+MINIMAX_API_KEY=
+
+# PostHog (analytics)
+NEXT_PUBLIC_POSTHOG_KEY=
+NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+
+# Blizzard API
+BLIZZARD_CLIENT_ID=
+BLIZZARD_CLIENT_SECRET=
+
+# Warcraft Logs API
+WCL_CLIENT_ID=
+WCL_CLIENT_SECRET=
 ```
 
-4. Cloudflare 빌드 확인
+### 3. 개발 서버 실행
 ```bash
-npm run build:cf
+npm run dev
 ```
-
-5. 로컬 프리뷰
-```bash
-npm run preview:cf
-```
-
-6. 실제 배포
-```bash
-npm run deploy:cf
-```
-
-`wrangler.jsonc`에는 Worker 엔트리와 asset binding만 포함되어 있습니다. 민감한 값은 Cloudflare dashboard 또는 `wrangler secret put`으로 등록하세요.
+[http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🤝 기여하기 (Contributing)
-이 리포지토리는 개인/소규모 프로젝트 목적으로 구축되었습니다. 기여 관련 문의는 Issue를 통해 남겨주세요.
+## Cloudflare 배포
+
+```bash
+npm run build:cf     # 빌드
+npm run preview:cf   # 로컬 미리보기
+npm run deploy:cf    # 배포
+```
+
+민감한 환경 변수는 Cloudflare Dashboard 또는 `wrangler secret put`으로 등록합니다.
+
+---
+
+## 프로젝트 구조
+
+```
+app/
+  page.tsx              # 메인 (탭 상태 통합)
+  layout.tsx            # 루트 레이아웃
+  components/
+    MainTabs.tsx
+    Header.tsx
+    roster/             # 파티원 명단 탭
+    market/             # 공대거래 탭
+    raid-analysis/      # 공대분석 탭
+    help/               # 도움말 탭
+    tutorial/           # 웰컴 모달, 투어
+    discord/            # Discord 웹훅 전송
+    profile/            # 프로필 모달
+    auth/               # 로그인 UI
+  actions/              # Server Actions (auth, roster, profile 등)
+  api/
+    character/          # Blizzard 캐릭터 조회
+    raid-analysis/      # 공대분석 통합 API
+    ai/                 # Minimax AI (로그 분석)
+    item/batch/         # 아이템 배치 조회
+    logs/               # WCL 로그 조회
+    wcl/                # WCL 타임라인
+    discord/            # Discord 웹훅
+    spell/              # 스펠 조회
+  hooks/
+    useTour.ts          # Driver.js 스팟라이트 투어
+    useMarketStorage.ts # 공대거래 Supabase 저장
+    useAnalytics.ts
+  lib/
+    raidUtils.ts
+    tokenCache.ts       # WCL/Blizzard OAuth 토큰 캐시
+  types/
+  constants/
+```
+
+---
+
+## 주의사항
+
+- `.env*`, `.dev.vars` 파일은 gitignore 처리되어 있습니다. 절대 커밋하지 마세요.
+- Rate Limiter는 `globalThis` 기반 in-memory로 Cloudflare Workers 다중 isolate 환경에서 cross-isolate 공유가 되지 않습니다.
+- 클라이언트에서 Supabase 직접 호출 시 RLS 정책을 반드시 확인하세요.
+
+---
+
+건전한피드백 길드 제공
