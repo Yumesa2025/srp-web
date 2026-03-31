@@ -98,9 +98,9 @@ body {
   background: rgba(0, 0, 0, 0.85) !important;
 }
 
-/* 강조 영역을 밝게 → 어두운 overlay 대비로 spotlight 효과 */
+/* 강조 영역의 원래 대비를 유지하고 외곽선/glow로만 spotlight 효과를 준다 */
 .driver-active-element {
-  filter: brightness(3) !important;
+  filter: none !important;
   outline: 3px solid rgba(34, 211, 238, 0.9) !important;
   outline-offset: 5px !important;
   box-shadow: 0 0 20px rgba(34, 211, 238, 0.4) !important;
