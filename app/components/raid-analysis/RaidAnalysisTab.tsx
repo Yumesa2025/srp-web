@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type { RaidFight, RaidAnalysisResult } from '@/app/types/raidAnalysis';
-import { createClient } from '@/app/utils/supabase/client';
 import DeathAnalysisSection from './DeathAnalysisSection';
 import ConsumablesSection from './ConsumablesSection';
 import DpsGraphSection from './DpsGraphSection';
@@ -37,7 +36,6 @@ function formatFightTime(fightStartedAt?: number): string {
 }
 
 export default function RaidAnalysisTab() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [urlInput, setUrlInput]     = useState('');
   const [reportCode, setReportCode] = useState('');
   const [fights, setFights]         = useState<RaidFight[]>([]);
@@ -46,13 +44,6 @@ export default function RaidAnalysisTab() {
   const [analysis, setAnalysis]     = useState<RaidAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError]           = useState('');
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data }) => {
-      setIsLoggedIn(!!data.session);
-    });
-  }, []);
 
   // 전투 목록 불러오기
   const loadFights = useCallback(async (overrideUrl?: string) => {
@@ -112,18 +103,6 @@ export default function RaidAnalysisTab() {
   }, [reportCode]);
 
   const selectedFight = fights.find(f => f.id === selectedFightId);
-
-  if (isLoggedIn === null) return null;
-
-  if (!isLoggedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <p className="text-4xl">🔒</p>
-        <p className="text-white font-bold text-lg">로그인이 필요합니다</p>
-        <p className="text-gray-500 text-sm">공대 분석 기능은 로그인 후 이용할 수 있습니다.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
