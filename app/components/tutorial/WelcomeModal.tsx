@@ -27,7 +27,7 @@ export default function WelcomeModal({ onStart }: Props) {
           {/* 애드온 안내 + 다운로드 */}
           <div className="flex flex-col gap-2">
             <p className="text-gray-400 text-base leading-relaxed">
-              Smart Raid Plan 건전한 피드백 애드온이 필요합니다.
+              <span className="text-cyan-300 font-semibold">"Smart Raid Plan 건전한 피드백"</span> 애드온이 필요합니다.
             </p>
             <a
               href="https://www.curseforge.com/wow/addons/smart-raid-plan"
@@ -44,8 +44,9 @@ export default function WelcomeModal({ onStart }: Props) {
             튜토리얼은 상단 <span className="text-gray-500 font-semibold">도움말</span> 탭 → <span className="text-gray-500 font-semibold">회원</span> 섹션에서 언제든 다시 확인할 수 있습니다.
           </p>
 
-          {/* 튜토리얼 시작 버튼 */}
-          <div className="flex justify-end">
+          {/* 튜토리얼 시작 버튼 + 제공 */}
+          <div className="flex items-end justify-between">
+            <p className="text-gray-600 text-xs">건전한피드백 길드 제공</p>
             <button
               onClick={onStart}
               className="px-10 py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl transition-colors text-xl"
