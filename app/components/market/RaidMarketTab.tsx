@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import LazyImage from "@/app/components/LazyImage";
 import { useMarketStorage } from "@/app/hooks/useMarketStorage";
 import RaidSavePanel from "./RaidSavePanel";
@@ -43,8 +43,38 @@ export default function RaidMarketTab() {
   const [isMetaLoading, setIsMetaLoading] = useState(false);
 
   const metaCacheRef = useRef<Map<string, ItemMeta>>(new Map());
+  // 투어 중 원래 입력값 저장용
+  const preTourInputRef = useRef<string | null>(null);
+  // 최신 ledgerInput을 이벤트 핸들러에서 참조하기 위한 ref
+  const ledgerInputRef = useRef(ledgerInput);
+  useEffect(() => { ledgerInputRef.current = ledgerInput; }, [ledgerInput]);
 
   const storage = useMarketStorage();
+
+  const TOUR_EXAMPLE =
+    '249374;가로쉬;10000|256656;가로쉬;10000|249348;실바나스;10000|249805;스랄;10000|249343;제이나;10000|249381;스랄;10000';
+
+  // 투어 시작/종료 이벤트 처리 (마운트 시 한 번만 등록)
+  useEffect(() => {
+    const onStart = () => {
+      preTourInputRef.current = ledgerInputRef.current;
+      setLedgerInput(TOUR_EXAMPLE);
+      processLedger(TOUR_EXAMPLE);
+    };
+    const onEnd = () => {
+      const original = preTourInputRef.current ?? '';
+      preTourInputRef.current = null;
+      setLedgerInput(original);
+      processLedger(original);
+    };
+    window.addEventListener('srp-tour-market-start', onStart);
+    window.addEventListener('srp-tour-market-end', onEnd);
+    return () => {
+      window.removeEventListener('srp-tour-market-start', onStart);
+      window.removeEventListener('srp-tour-market-end', onEnd);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── 정산 계산 ──────────────────────────────────────────────
   const payout = useMemo(() => {

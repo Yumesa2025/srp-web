@@ -143,11 +143,17 @@ export function useTour() {
     const steps = TAB_STEPS[tab];
     if (!steps?.length) return;
 
+    const { driver } = await import('driver.js');
+
+    // 공대거래 탭: 예시 데이터 주입 이벤트 발송 후 DOM 업데이트 대기
+    if (tab === 'RAID_MARKET') {
+      window.dispatchEvent(new CustomEvent('srp-tour-market-start'));
+      await new Promise((r) => setTimeout(r, 400));
+    }
+
     // 현재 DOM에 존재하는 스텝만 사용 (동적 요소 필터링)
     const validSteps = steps.filter((step) => !!document.querySelector(step.element));
     if (!validSteps.length) return;
-
-    const { driver } = await import('driver.js');
 
     const startTime = Date.now();
     let intentionalClose = false;
@@ -174,6 +180,10 @@ export function useTour() {
         const isLastStep = driverObj.isLastStep?.() ?? false;
         // 2초 이내 + X/완료 버튼이 아닌 경우(overlay 클릭) → 차단
         if (elapsed < 2000 && !intentionalClose && !isLastStep) return;
+        // 공대거래 탭: 원래 상태로 복귀 이벤트 발송
+        if (tab === 'RAID_MARKET') {
+          window.dispatchEvent(new CustomEvent('srp-tour-market-end'));
+        }
         markTabSeen(tab);
         driverObj.destroy();
       },
