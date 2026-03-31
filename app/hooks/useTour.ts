@@ -156,6 +156,10 @@ export function useTour() {
       prevBtnText: '이전',
       doneBtnText: '완료',
       showButtons: ['next', 'previous', 'close'],
+      overlayColor: '#000',
+      overlayOpacity: 0.85,
+      stagePadding: 6,
+      stageRadius: 8,
       popoverClass: 'srp-tour-popover',
       steps: validSteps,
       onDestroyStarted: () => {
