@@ -79,8 +79,12 @@ body {
   background-color: #4b5563;
 }
 
+.srp-tour-popover .driver-popover-next-btn {
+  background-color: #65a30d;
+}
+
 .srp-tour-popover .driver-popover-next-btn:hover {
-  background-color: #0891b2;
+  background-color: #4d7c0f;
 }
 
 .srp-tour-popover .driver-popover-done-btn {
