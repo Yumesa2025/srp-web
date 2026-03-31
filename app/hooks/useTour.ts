@@ -149,6 +149,9 @@ export function useTour() {
 
     const { driver } = await import('driver.js');
 
+    const startTime = Date.now();
+    let intentionalClose = false;
+
     const driverObj = driver({
       showProgress: true,
       progressText: '{{current}} / {{total}}',
@@ -162,7 +165,14 @@ export function useTour() {
       stageRadius: 8,
       popoverClass: 'srp-tour-popover',
       steps: validSteps,
+      // X 버튼 클릭은 항상 허용
+      onCloseClick: () => {
+        intentionalClose = true;
+      },
       onDestroyStarted: () => {
+        const elapsed = Date.now() - startTime;
+        // 2초 이내 + X 버튼이 아닌 경우(overlay 클릭) → 차단
+        if (elapsed < 2000 && !intentionalClose) return;
         markTabSeen(tab);
         driverObj.destroy();
       },
