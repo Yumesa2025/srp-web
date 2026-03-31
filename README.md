@@ -32,63 +32,6 @@ World of Warcraft 레이드 공대장을 위한 올인원 관리 도구.
 
 ---
 
-## 로컬 개발
-
-### 1. 클론 및 패키지 설치
-```bash
-git clone https://github.com/Yumesa2025/srp-web.git
-cd srp-web
-npm install
-```
-
-### 2. 환경 변수 설정
-```bash
-cp .dev.vars.example .dev.vars
-```
-`.dev.vars`에 아래 값들을 채워넣습니다.
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# Minimax (AI 분석)
-MINIMAX_API_KEY=
-
-# PostHog (analytics)
-NEXT_PUBLIC_POSTHOG_KEY=
-NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
-
-# Blizzard API
-BLIZZARD_CLIENT_ID=
-BLIZZARD_CLIENT_SECRET=
-
-# Warcraft Logs API
-WCL_CLIENT_ID=
-WCL_CLIENT_SECRET=
-```
-
-### 3. 개발 서버 실행
-```bash
-npm run dev
-```
-[http://localhost:3000](http://localhost:3000)
-
----
-
-## Cloudflare 배포
-
-```bash
-npm run build:cf     # 빌드
-npm run preview:cf   # 로컬 미리보기
-npm run deploy:cf    # 배포
-```
-
-민감한 환경 변수는 Cloudflare Dashboard 또는 `wrangler secret put`으로 등록합니다.
-
----
-
 ## 프로젝트 구조
 
 ```
@@ -126,14 +69,6 @@ app/
   types/
   constants/
 ```
-
----
-
-## 주의사항
-
-- `.env*`, `.dev.vars` 파일은 gitignore 처리되어 있습니다. 절대 커밋하지 마세요.
-- Rate Limiter는 `globalThis` 기반 in-memory로 Cloudflare Workers 다중 isolate 환경에서 cross-isolate 공유가 되지 않습니다.
-- 클라이언트에서 Supabase 직접 호출 시 RLS 정책을 반드시 확인하세요.
 
 ---
 
