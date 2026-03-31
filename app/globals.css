@@ -93,13 +93,14 @@ body {
   color: #f9fafb;
 }
 
-/* overlay를 매우 어둡게 → 강조 영역(원래 밝기)과 대비 극대화 */
+/* overlay 어둡게 → 강조 영역과 대비 생성 */
 .driver-overlay {
-  background: rgba(0, 0, 0, 0.88) !important;
+  background: rgba(0, 0, 0, 0.85) !important;
 }
 
-/* 강조 영역은 brightness 건드리지 않고 cyan 링으로만 경계 표시 */
+/* 강조 영역을 밝게 → 어두운 overlay 대비로 spotlight 효과 */
 .driver-active-element {
+  filter: brightness(3) !important;
   outline: 3px solid rgba(34, 211, 238, 0.9) !important;
   outline-offset: 5px !important;
   box-shadow: 0 0 20px rgba(34, 211, 238, 0.4) !important;
