@@ -55,6 +55,9 @@ export default function RootLayout({
         <PostHogProvider>
           <Header />
           {children}
+          <footer className="text-center text-xs text-gray-500 py-4 mt-8">
+            © 2026 건전한피드백 길드. All rights reserved.
+          </footer>
         </PostHogProvider>
       </body>
     </html>
