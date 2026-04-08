@@ -1,4 +1,4 @@
-import ky, { type HTTPError } from "ky";
+import ky, { HTTPError, type BeforeErrorState } from "ky";
 
 type ErrorPayload = {
   error?: string;
@@ -21,7 +21,11 @@ async function getResponseErrorMessage(response: Response): Promise<string | und
   }
 }
 
-async function enrichHttpError(error: HTTPError): Promise<HTTPError> {
+async function enrichHttpError({ error }: BeforeErrorState): Promise<Error> {
+  if (!(error instanceof HTTPError)) {
+    return error;
+  }
+
   const responseMessage = await getResponseErrorMessage(error.response);
   const fallbackMessage = `HTTP ${error.response.status} ${error.response.statusText}`.trim();
 
