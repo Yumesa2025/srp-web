@@ -1,14 +1,15 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { login, signup, signout } from '@/app/actions/auth';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/app/utils/supabase/client';
-import ProfileModal from '@/app/components/profile/ProfileModal';
 import type { ProfileSummary } from '@/app/types/profile';
 
 const supabase = createClient();
+const ProfileModal = dynamic(() => import('@/app/components/profile/ProfileModal'));
 
 export default function AuthClientUI({ user, profile }: { user: User | null; profile: ProfileSummary | null }) {
   const [isAuthOpen,    setIsAuthOpen]    = useState(false);
