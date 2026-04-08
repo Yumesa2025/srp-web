@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { api } from "@/app/lib/api";
 import { ClinicLogSummary, ClinicLogTarget, ClinicReportItem } from "@/app/types/clinic";
 
 function extractReportId(raw: string): string {
@@ -19,14 +20,15 @@ function parseFightId(raw?: string): number | undefined {
 }
 
 async function fetchClinicSummary(target: ClinicLogTarget): Promise<ClinicLogSummary> {
-  const res = await fetch("/api/logs", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(target),
-  });
-  const data = (await res.json()) as { error?: string; summary?: ClinicLogSummary };
-  if (!res.ok) throw new Error(data.error || "로그 요약을 가져오지 못했습니다.");
-  return data.summary as ClinicLogSummary;
+  const data = await api.post("/api/logs", {
+    json: target,
+  }).json<{ summary?: ClinicLogSummary }>();
+
+  if (!data.summary) {
+    throw new Error("로그 요약을 가져오지 못했습니다.");
+  }
+
+  return data.summary;
 }
 
 function parseClinicTargets(
@@ -59,13 +61,10 @@ function parseClinicTargets(
 }
 
 async function fetchAiAnalysis(summary: ClinicLogSummary): Promise<string> {
-  const res = await fetch("/api/ai/log-analysis", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ failedLog: summary }),
-  });
-  const data = (await res.json()) as { error?: string; analysis?: string };
-  if (!res.ok) throw new Error(data.error || "AI 분석에 실패했습니다.");
+  const data = await api.post("/api/ai/log-analysis", {
+    json: { failedLog: summary },
+  }).json<{ analysis?: string }>();
+
   return data.analysis || "분석 결과가 비어 있습니다.";
 }
 

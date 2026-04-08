@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "@/app/lib/api";
 import LazyImage from "@/app/components/LazyImage";
 import { useMarketStorage } from "@/app/hooks/useMarketStorage";
 import RaidSavePanel from "./RaidSavePanel";
@@ -89,14 +90,6 @@ export default function RaidMarketTab() {
     return { safeSize, safeExpense, safeBonus, totalGold, expenseAmt, distributable, perPerson, remainder };
   }, [ledgerItems, raidSize, raidExpense, raidBonus]);
 
-  const winnerSummary = useMemo(() => {
-    const map = new Map<string, number>();
-    ledgerItems.forEach((i) => map.set(i.winner, (map.get(i.winner) ?? 0) + i.gold));
-    return Array.from(map.entries())
-      .map(([winner, total]) => ({ winner, total }))
-      .sort((a, b) => b.total - a.total);
-  }, [ledgerItems]);
-
   const highestBid = useMemo(() =>
     ledgerItems.length ? [...ledgerItems].sort((a, b) => b.gold - a.gold)[0] : null,
     [ledgerItems]
@@ -108,9 +101,10 @@ export default function RaidMarketTab() {
     if (!toFetch.length) return;
     setIsMetaLoading(true);
     try {
-      const res  = await fetch(`/api/item/batch?ids=${toFetch.join(",")}`);
-      const data = (await res.json()) as { items?: Record<string, ItemMeta>; error?: string };
-      if (!res.ok) throw new Error(data.error);
+      const data = await api
+        .get(`/api/item/batch?ids=${toFetch.join(",")}`)
+        .json<{ items?: Record<string, ItemMeta> }>();
+
       Object.entries(data.items ?? {}).forEach(([id, meta]) => {
         if (/^\d+$/.test(id))
           metaCacheRef.current.set(id, { name: meta.name || `아이템 (${id})`, iconUrl: meta.iconUrl || FALLBACK_ICON });
@@ -247,10 +241,8 @@ export default function RaidMarketTab() {
             <DiscordSendButton
               label="Discord 전송"
               onSend={async () => {
-                const res = await fetch('/api/discord', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
+                await api.post('/api/discord', {
+                  json: {
                     type: 'market',
                     label: `${new Date().toLocaleDateString('ko-KR')} 정산`,
                     raidSize: payout.safeSize,
@@ -258,12 +250,8 @@ export default function RaidMarketTab() {
                     raidExpense: payout.expenseAmt,
                     perPerson: payout.perPerson,
                     items: ledgerItems.map((i) => ({ itemName: i.itemName, winner: i.winner, gold: i.gold })),
-                  }),
+                  },
                 });
-                if (!res.ok) {
-                  const data = await res.json() as { error?: string };
-                  throw new Error(data.error ?? 'Discord 전송 실패');
-                }
               }}
             />
           )}

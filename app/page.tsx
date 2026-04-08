@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { HTTPError, TimeoutError } from "ky";
 import { DEFENSIVE_SKILLS } from "@/app/constants/defensiveSkills";
 import { MainTab, PlayerData, RoleType } from "@/app/types";
+import { api } from "@/app/lib/api";
 
 import dynamic from "next/dynamic";
 import MainTabs from "@/app/components/MainTabs";
@@ -110,19 +112,12 @@ export default function Home() {
 
       // 2단계: 모든 캐릭터 API 호출을 병렬로 실행
       const fetchOne = async ({ name, realm, inputId }: FetchEntry): Promise<PlayerData> => {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), CHAR_FETCH_TIMEOUT_MS);
         try {
           const params = new URLSearchParams({ realm, name });
-          const res = await fetch(`/api/character?${params.toString()}`, {
-            signal: controller.signal,
+          const data = await api.get(`/api/character?${params.toString()}`, {
             cache: "no-store",
-          });
-          const data = (await res.json()) as CharacterApiData;
-
-          if (!res.ok) {
-            return { id: inputId, name, realm, role: "UNASSIGNED", error: data.error || "조회 실패" };
-          }
+            timeout: CHAR_FETCH_TIMEOUT_MS,
+          }).json<CharacterApiData>();
 
           const resolvedName = typeof data.name === "string" && data.name.trim() ? data.name : name;
           const resolvedRealm = typeof data.realm === "string" && data.realm.trim() ? data.realm : realm;
@@ -143,12 +138,12 @@ export default function Home() {
             role: guessRole(data.activeSpec),
           };
         } catch (err) {
-          const message = err instanceof DOMException && err.name === "AbortError"
+          const message = err instanceof TimeoutError
             ? "조회 시간 초과"
-            : "통신 에러";
+            : err instanceof HTTPError
+              ? (err.message.startsWith("HTTP ") ? "조회 실패" : err.message)
+              : "통신 에러";
           return { id: inputId, name, realm, role: "UNASSIGNED", error: message };
-        } finally {
-          clearTimeout(timeout);
         }
       };
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { api } from '@/app/lib/api';
 import type { RaidFight, RaidAnalysisResult } from '@/app/types/raidAnalysis';
 import DeathAnalysisSection from './DeathAnalysisSection';
 import ConsumablesSection from './ConsumablesSection';
@@ -59,9 +60,10 @@ export default function RaidAnalysisTab() {
     setReportCode(code);
 
     try {
-      const res = await fetch(`/api/raid-analysis?code=${code}`);
-      const data = await res.json() as { fights?: RaidFight[]; error?: string };
-      if (!res.ok) throw new Error(data.error ?? '전투 목록을 불러오지 못했습니다.');
+      const data = await api
+        .get(`/api/raid-analysis?code=${code}`)
+        .json<{ fights?: RaidFight[] }>();
+
       setFights(data.fights ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : '오류가 발생했습니다.');
@@ -78,10 +80,8 @@ export default function RaidAnalysisTab() {
     setIsAnalyzing(true);
 
     try {
-      const res = await fetch('/api/raid-analysis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await api.post('/api/raid-analysis', {
+        json: {
           reportCode,
           fightId: fight.id,
           fightName: fight.name,
@@ -90,10 +90,9 @@ export default function RaidAnalysisTab() {
           kill: fight.kill,
           bossPercentage: fight.bossPercentage,
           stepSec: 5,
-        }),
-      });
-      const data = await res.json() as { result?: RaidAnalysisResult; error?: string };
-      if (!res.ok) throw new Error(data.error ?? '분석에 실패했습니다.');
+        },
+      }).json<{ result?: RaidAnalysisResult }>();
+
       setAnalysis(data.result ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : '분석 중 오류가 발생했습니다.');

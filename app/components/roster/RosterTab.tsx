@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { api } from "@/app/lib/api";
 import { PlayerData, RoleType } from "@/app/types";
 import RaidZone from "@/app/components/RaidZone";
 import RosterManager from "@/app/components/RosterManager";
@@ -182,10 +183,8 @@ export default function RosterTab({
           <DiscordSendButton
             label="Discord 전송"
             onSend={async () => {
-              const res = await fetch('/api/discord', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+              await api.post('/api/discord', {
+                json: {
                   type: 'roster',
                   players: players.map((p) => ({
                     name: p.name,
@@ -193,12 +192,8 @@ export default function RosterTab({
                     itemLevel: p.itemLevel,
                     role: p.role,
                   })),
-                }),
+                },
               });
-              if (!res.ok) {
-                const data = await res.json() as { error?: string };
-                throw new Error(data.error ?? 'Discord 전송 실패');
-              }
             }}
           />
         )}
