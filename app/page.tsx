@@ -4,13 +4,15 @@ import { useState } from "react";
 import { DEFENSIVE_SKILLS } from "@/app/constants/defensiveSkills";
 import { MainTab, PlayerData, RoleType } from "@/app/types";
 
+import dynamic from "next/dynamic";
 import MainTabs from "@/app/components/MainTabs";
-import RaidMarketTab from "@/app/components/market/RaidMarketTab";
 import ErrorBoundary from "@/app/components/ErrorBoundary";
-import RosterTab from "@/app/components/roster/RosterTab";
-import RaidAnalysisTab from "@/app/components/raid-analysis/RaidAnalysisTab";
-import WelcomeModal from "@/app/components/tutorial/WelcomeModal";
-import HelpTab from "@/app/components/help/HelpTab";
+
+const RosterTab = dynamic(() => import("@/app/components/roster/RosterTab"));
+const RaidMarketTab = dynamic(() => import("@/app/components/market/RaidMarketTab"));
+const RaidAnalysisTab = dynamic(() => import("@/app/components/raid-analysis/RaidAnalysisTab"));
+const HelpTab = dynamic(() => import("@/app/components/help/HelpTab"));
+const WelcomeModal = dynamic(() => import("@/app/components/tutorial/WelcomeModal"));
 
 import { guessRole } from "@/app/lib/raidUtils";
 import { useAnalytics } from "@/app/hooks/useAnalytics";
@@ -28,6 +30,7 @@ export default function Home() {
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
   const [skippedDuplicates, setSkippedDuplicates] = useState<string[]>([]);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const [mountedTabs, setMountedTabs] = useState<Set<MainTab>>(new Set(["ROSTER"]));
 
   const analytics = useAnalytics();
   const { shouldShow, markSeen } = useTutorialFirstVisit();
@@ -46,6 +49,7 @@ export default function Home() {
   };
 
   const handleTabChange = (tab: MainTab) => {
+    setMountedTabs(prev => new Set(prev).add(tab));
     setActiveTab(tab);
     analytics.trackTabChange(tab);
     // 해당 탭을 처음 방문하는 경우 투어 자동 시작
@@ -208,46 +212,54 @@ export default function Home() {
 
         <MainTabs activeTab={activeTab} onChange={handleTabChange} />
 
-        <div className={activeTab === "ROSTER" ? "" : "hidden"}>
-          <ErrorBoundary>
-            <RosterTab
-              inputText={inputText}
-              onInputTextChange={setInputText}
-              players={players}
-              isLoading={isLoading}
-              skippedDuplicates={skippedDuplicates}
-              onFetchRaidData={fetchRaidData}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onDragStart={handleDragStart}
-              onRemovePlayer={removePlayer}
-            />
-          </ErrorBoundary>
-        </div>
+        {mountedTabs.has("ROSTER") && (
+          <div className={activeTab === "ROSTER" ? "" : "hidden"}>
+            <ErrorBoundary>
+              <RosterTab
+                inputText={inputText}
+                onInputTextChange={setInputText}
+                players={players}
+                isLoading={isLoading}
+                skippedDuplicates={skippedDuplicates}
+                onFetchRaidData={fetchRaidData}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragStart={handleDragStart}
+                onRemovePlayer={removePlayer}
+              />
+            </ErrorBoundary>
+          </div>
+        )}
 
-        <div className={activeTab === "RAID_MARKET" ? "" : "hidden"}>
-          <ErrorBoundary>
-            <RaidMarketTab />
-          </ErrorBoundary>
-        </div>
+        {mountedTabs.has("RAID_MARKET") && (
+          <div className={activeTab === "RAID_MARKET" ? "" : "hidden"}>
+            <ErrorBoundary>
+              <RaidMarketTab />
+            </ErrorBoundary>
+          </div>
+        )}
 
-        <div className={activeTab === "RAID_AI_ANALYSIS" ? "" : "hidden"}>
-          <ErrorBoundary>
-            <RaidAnalysisTab />
-          </ErrorBoundary>
-        </div>
+        {mountedTabs.has("RAID_AI_ANALYSIS") && (
+          <div className={activeTab === "RAID_AI_ANALYSIS" ? "" : "hidden"}>
+            <ErrorBoundary>
+              <RaidAnalysisTab />
+            </ErrorBoundary>
+          </div>
+        )}
 
-        <div className={activeTab === "HELP" ? "" : "hidden"}>
-          <ErrorBoundary>
-            <HelpTab onOpenTutorial={() => {
-              // 모든 탭 seen 초기화 → ROSTER로 이동 → 투어 시작
-              // (이후 거래/분석 탭 첫 방문 시에도 투어 자동 재실행)
-              resetAllTours();
-              handleTabChange("ROSTER");
-              setTimeout(() => startTour("ROSTER"), 300);
-            }} />
-          </ErrorBoundary>
-        </div>
+        {mountedTabs.has("HELP") && (
+          <div className={activeTab === "HELP" ? "" : "hidden"}>
+            <ErrorBoundary>
+              <HelpTab onOpenTutorial={() => {
+                // 모든 탭 seen 초기화 → ROSTER로 이동 → 투어 시작
+                // (이후 거래/분석 탭 첫 방문 시에도 투어 자동 재실행)
+                resetAllTours();
+                handleTabChange("ROSTER");
+                setTimeout(() => startTour("ROSTER"), 300);
+              }} />
+            </ErrorBoundary>
+          </div>
+        )}
 
         {welcomeOpen && (
           <WelcomeModal onStart={handleWelcomeStart} />
