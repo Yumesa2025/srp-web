@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { externalApi } from '@/app/lib/api';
 import { createClient } from '@/app/utils/supabase/server';
 
 interface RosterPlayer {
@@ -126,10 +127,9 @@ export async function POST(request: Request) {
     ? buildRosterEmbed(payload.players)
     : buildMarketEmbed(payload);
 
-  const res = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(discordBody),
+  const res = await externalApi.post(webhookUrl, {
+    json: discordBody,
+    throwHttpErrors: false,
   });
 
   if (!res.ok) {

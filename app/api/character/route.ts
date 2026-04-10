@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { externalApi } from '@/app/lib/api';
 import { resolveKrRealm } from '@/app/lib/krRealmResolver';
 import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 import { getBlizzardToken, getWclToken } from '@/app/lib/tokenCache';
@@ -147,14 +148,13 @@ function getLegacyBestPerfAvg(details: WclBestPerfDetails | null): number | null
 async function fetchWclRaidName(accessToken: string, zoneId: number): Promise<string | null> {
   try {
     const query = `query($zoneId: Int!) { worldData { zone(id: $zoneId) { name } } }`;
-    const response = await fetch('https://www.warcraftlogs.com/api/v2/client', {
-      method: 'POST',
+    const response = await externalApi.post('https://www.warcraftlogs.com/api/v2/client', {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ query, variables: { zoneId } }),
+      json: { query, variables: { zoneId } },
       cache: 'no-store',
+      throwHttpErrors: false,
     });
 
     if (!response.ok) return null;
@@ -191,14 +191,13 @@ async function fetchWclBestPerfDetails(characterName: string, realmSlug: string)
       `;
       const variables = { name: characterName, server: normalizedRealm, region: "KR" };
 
-      const graphResponse = await fetch('https://www.warcraftlogs.com/api/v2/client', {
-        method: 'POST',
+      const graphResponse = await externalApi.post('https://www.warcraftlogs.com/api/v2/client', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query, variables }),
+        json: { query, variables },
         cache: 'no-store',
+        throwHttpErrors: false,
       });
 
       if (!graphResponse.ok) {
@@ -295,9 +294,9 @@ export async function GET(request: Request) {
     const baseUrl = `https://kr.api.blizzard.com/profile/wow/character/${realmSlug}/${encodeURIComponent(name.toLowerCase())}`;
 
     const [statsResponse, profileResponse, talentsResponse, bestPerfDetails] = await Promise.all([
-      fetch(`${baseUrl}/statistics?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store' }),
-      fetch(`${baseUrl}?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store' }),
-      fetch(`${baseUrl}/specializations?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store' }),
+      externalApi.get(`${baseUrl}/statistics?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store', throwHttpErrors: false }),
+      externalApi.get(`${baseUrl}?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store', throwHttpErrors: false }),
+      externalApi.get(`${baseUrl}/specializations?namespace=profile-kr&locale=ko_KR`, { headers, cache: 'no-store', throwHttpErrors: false }),
       withTimeout(fetchWclBestPerfDetails(name, realmSlug), 4000, null),
     ]);
 
