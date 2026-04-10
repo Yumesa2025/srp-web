@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { externalApi } from "@/app/lib/api";
 import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 import { createClient } from "@/app/utils/supabase/server";
 
@@ -251,17 +252,16 @@ ${JSON.stringify(compactLog(failedLog), null, 2)}
 - 비난 대신 실행 가능한 지시문으로 작성한다.
 `;
 
-    const response = await fetch("https://api.minimax.chat/v1/text/chatcompletion_v2", {
-      method: "POST",
+    const response = await externalApi.post("https://api.minimax.chat/v1/text/chatcompletion_v2", {
       headers: {
-        "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
+      json: {
         model: "MiniMax-Text-01",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.3,
-      })
+      },
+      throwHttpErrors: false,
     });
 
     if (!response.ok) {

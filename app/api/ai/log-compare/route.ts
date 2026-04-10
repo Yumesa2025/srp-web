@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { externalApi } from "@/app/lib/api";
 import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 import { createClient } from "@/app/utils/supabase/server";
 
@@ -144,17 +145,16 @@ ${JSON.stringify(successLogs.map(compactLog), null, 2)}
 - 생존기 관련 코멘트는 death.defensives 정보가 있을 때만 단정한다.
 `;
 
-    const response = await fetch("https://api.minimax.chat/v1/text/chatcompletion_v2", {
-      method: "POST",
+    const response = await externalApi.post("https://api.minimax.chat/v1/text/chatcompletion_v2", {
       headers: {
-        "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
+      json: {
         model: "MiniMax-Text-01",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.3,
-      })
+      },
+      throwHttpErrors: false,
     });
 
     if (!response.ok) {

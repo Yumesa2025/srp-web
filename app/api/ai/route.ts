@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { externalApi } from '@/app/lib/api';
 import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 import { createClient } from '@/app/utils/supabase/server';
 
@@ -76,17 +77,16 @@ export async function POST(request: Request) {
     `;
 
     // 3. Minimax API에 전송
-    const response = await fetch("https://api.minimax.chat/v1/text/chatcompletion_v2", {
-      method: "POST",
+    const response = await externalApi.post("https://api.minimax.chat/v1/text/chatcompletion_v2", {
       headers: {
-        "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
+      json: {
         model: "MiniMax-Text-01",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
-      })
+      },
+      throwHttpErrors: false,
     });
 
     if (!response.ok) {
