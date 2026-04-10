@@ -1,3 +1,6 @@
+import { HTTPError } from "ky";
+import { externalApi } from "@/app/lib/api";
+
 type RealmInfo = {
   slug: string;
   name: string | null;
@@ -32,23 +35,28 @@ async function fetchKrRealmMap(accessToken: string): Promise<Map<string, RealmIn
     return realmCache.realms;
   }
 
-  const response = await fetch(
-    "https://kr.api.blizzard.com/data/wow/realm/index?namespace=dynamic-kr&locale=ko_KR",
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
-    }
-  );
+  let data: { realms?: Array<{ slug?: string; name?: string }> };
 
-  if (!response.ok) {
-    throw new Error("서버 목록을 불러오지 못했습니다.");
+  try {
+    data = await externalApi
+      .get("https://kr.api.blizzard.com/data/wow/realm/index?namespace=dynamic-kr&locale=ko_KR", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: "no-store",
+      })
+      .json<{ realms?: Array<{ slug?: string; name?: string }> }>();
+  } catch (error) {
+    if (error instanceof HTTPError) {
+      throw new Error("서버 목록을 불러오지 못했습니다.");
+    }
+
+    throw error;
   }
 
-  const data = (await response.json()) as {
-    realms?: Array<{ slug?: string; name?: string }>;
-  };
+  if (!Array.isArray(data?.realms)) {
+    throw new Error("서버 목록을 불러오지 못했습니다.");
+  }
   const realms = new Map<string, RealmInfo>();
   const realmList = Array.isArray(data?.realms) ? data.realms : [];
 

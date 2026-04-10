@@ -1,3 +1,5 @@
+import { externalApi } from "@/app/lib/api";
+
 /**
  * OAuth 클라이언트 자격증명 토큰 캐시
  *
@@ -31,19 +33,20 @@ export async function getWclToken(): Promise<string> {
   }
 
   const authString = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  const res = await fetch("https://www.warcraftlogs.com/oauth/token", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${authString}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "grant_type=client_credentials",
-    cache: "no-store",
-  });
-
-  const rawText = await res.text();
-  if (!res.ok) {
-    throw new Error(`WCL 토큰 발급 HTTP ${res.status}: ${rawText.slice(0, 500)}`);
+  let rawText: string;
+  try {
+    rawText = await externalApi.post("https://www.warcraftlogs.com/oauth/token", {
+      headers: {
+        Authorization: `Basic ${authString}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "grant_type=client_credentials",
+      cache: "no-store",
+    }).text();
+  } catch (error) {
+    throw error instanceof Error
+      ? new Error(`WCL 토큰 발급 실패: ${error.message}`)
+      : new Error("WCL 토큰 발급 실패");
   }
 
   let data: { access_token?: string; expires_in?: number };
@@ -73,17 +76,15 @@ export async function getBlizzardToken(): Promise<string> {
   }
 
   const authString = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  const res = await fetch("https://oauth.battle.net/token", {
-    method: "POST",
+  const data = await externalApi.post("https://oauth.battle.net/token", {
     headers: {
       Authorization: `Basic ${authString}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: "grant_type=client_credentials",
     cache: "no-store",
-  });
+  }).json<{ access_token?: string; expires_in?: number }>();
 
-  const data = (await res.json()) as { access_token?: string; expires_in?: number };
   if (!data.access_token) throw new Error("블리자드 토큰 발급 실패");
 
   const expiresIn = typeof data.expires_in === "number" ? data.expires_in : 86400;

@@ -1,3 +1,5 @@
+import { externalApi } from "@/app/lib/api";
+
 const FALLBACK_ICON_URL = "https://wow.zamimg.com/images/wow/icons/large/inv_misc_questionmark.jpg";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24h
 const ERROR_TTL_MS = 1000 * 60 * 10; // 10m
@@ -85,11 +87,12 @@ async function lookupFromWowhead(spellId: string): Promise<SpellLookupResult> {
   const urls = [`https://www.wowhead.com/ko/spell=${spellId}`, `https://ko.wowhead.com/spell=${spellId}`];
 
   for (const url of urls) {
-    const res = await fetch(url, {
+    const res = await externalApi.get(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; SmartRaidPlanner/1.0)",
         "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
       },
+      throwHttpErrors: false,
       // Let Next cache remote response as well.
       next: { revalidate: 60 * 60 * 24 },
     });
