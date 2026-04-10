@@ -1,4 +1,5 @@
 import { ALL_DEFENSIVE_SKILLS } from "@/app/constants/defensiveSkills";
+import { externalApi } from "@/app/lib/api";
 
 export interface WclFightNode {
   id: number;
@@ -308,14 +309,13 @@ export const fetchWclGraphQL = async (
   query: string,
   variables?: Record<string, unknown>,
 ): Promise<WclGraphQlPayload> => {
-  const response = await fetch("https://www.warcraftlogs.com/api/v2/client", {
-    method: "POST",
+  const response = await externalApi.post("https://www.warcraftlogs.com/api/v2/client", {
     headers: {
-      "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ query, variables }),
+    json: { query, variables },
     cache: "no-store",
+    throwHttpErrors: false,
   });
   const rawText = await response.text();
 

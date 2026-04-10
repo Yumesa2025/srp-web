@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { externalApi } from '@/app/lib/api';
 import { getWclToken } from '@/app/lib/tokenCache';
 import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 import { createClient } from '@/app/utils/supabase/server';
@@ -61,17 +62,26 @@ export async function GET(request: Request) {
     `;
 
     // 3. WCL API(V2) 서버에 쿼리 전송
-    const wclRes = await fetch('https://www.warcraftlogs.com/api/v2/client', {
-      method: 'POST',
+    const wclRes = await externalApi.post('https://www.warcraftlogs.com/api/v2/client', {
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ query, variables: { code: reportId } }),
+      json: { query, variables: { code: reportId } },
       cache: 'no-store',
+      throwHttpErrors: false,
     });
 
-    const wclData = (await wclRes.json()) as WclFightsResponse;
+    const rawText = await wclRes.text();
+    if (!wclRes.ok) {
+      throw new Error(`WCL 조회 실패 HTTP ${wclRes.status}: ${rawText.slice(0, 500)}`);
+    }
+
+    let wclData: WclFightsResponse;
+    try {
+      wclData = JSON.parse(rawText) as WclFightsResponse;
+    } catch {
+      throw new Error(`WCL 응답 JSON 파싱 실패: ${rawText.slice(0, 500)}`);
+    }
 
     // 에러 처리
     if (wclData.errors) {

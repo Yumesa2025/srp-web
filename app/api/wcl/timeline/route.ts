@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { externalApi } from '@/app/lib/api';
 import { getWclToken } from '@/app/lib/tokenCache';
 import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 import { createClient } from '@/app/utils/supabase/server';
@@ -89,17 +90,27 @@ export async function GET(request: Request) {
       end: parsedEndTime,
     };
 
-    const wclRes = await fetch('https://www.warcraftlogs.com/api/v2/client', {
-      method: 'POST',
+    const wclRes = await externalApi.post('https://www.warcraftlogs.com/api/v2/client', {
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ query, variables }),
+      json: { query, variables },
       cache: 'no-store',
+      throwHttpErrors: false,
     });
 
-    const wclData = (await wclRes.json()) as WclTimelineResponse;
+    const rawText = await wclRes.text();
+    if (!wclRes.ok) {
+      throw new Error(`WCL 타임라인 조회 실패 HTTP ${wclRes.status}: ${rawText.slice(0, 500)}`);
+    }
+
+    let wclData: WclTimelineResponse;
+    try {
+      wclData = JSON.parse(rawText) as WclTimelineResponse;
+    } catch {
+      throw new Error(`WCL 타임라인 JSON 파싱 실패: ${rawText.slice(0, 500)}`);
+    }
+
     if (wclData.errors) throw new Error(wclData.errors[0].message);
 
     const reportNode = wclData.data?.reportData?.report;
