@@ -1,5 +1,8 @@
 'use client';
 
+/* 외부 WoW 아이콘 CDN 이미지로, Workers 배포에서 next/image 최적화 이득이 없어 <img>를 유지한다 */
+/* eslint-disable @next/next/no-img-element */
+
 import { useState } from 'react';
 import type { DefensiveUsagePlayer } from '@/app/types/raidAnalysis';
 import { getClassColor } from '@/app/constants/classColors';

@@ -27,7 +27,7 @@ export default function WelcomeModal({ onStart }: Props) {
           {/* 애드온 안내 + 다운로드 */}
           <div className="flex flex-col gap-3">
             <p className="text-gray-400 text-xl leading-relaxed">
-              <span className="text-cyan-300 font-semibold">"Smart Raid Plan 건전한 피드백"</span> 애드온이 필요합니다.
+              <span className="text-cyan-300 font-semibold">&quot;Smart Raid Plan 건전한 피드백&quot;</span> 애드온이 필요합니다.
             </p>
             <a
               href="https://www.curseforge.com/wow/addons/smart-raid-plan"
