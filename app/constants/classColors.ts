@@ -1,5 +1,5 @@
 // WoW 직업 색상 (WCL subType 기준)
-export const WOW_CLASS_COLORS: Record<string, string> = {
+const WOW_CLASS_COLORS: Record<string, string> = {
   DeathKnight: '#C41E3A',
   DemonHunter: '#A330C9',
   Druid:       '#FF7C0A',

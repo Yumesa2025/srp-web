@@ -94,8 +94,8 @@ export async function resolveKrRealm(accessToken: string, realmInput: string): P
       return resolved;
     }
   } catch {
-    // Realm index lookup is a convenience layer; character fetch should still
-    // work for already-correct slugs even if the index request fails.
+    // 서버 목록 조회는 편의 계층일 뿐이다. 이 요청이 실패해도 이미 올바른
+    // slug라면 캐릭터 조회는 그대로 동작해야 하므로 여기서 막지 않는다.
   }
 
   return {

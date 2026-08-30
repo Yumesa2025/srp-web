@@ -13,14 +13,12 @@ interface RosterPlayer {
 
 interface RosterPayload {
   type: 'roster';
-  // Discord 웹훅 URL (DB 제거로 클라이언트가 직접 전달)
   webhookUrl: string;
   players: RosterPlayer[];
 }
 
 interface MarketPayload {
   type: 'market';
-  // Discord 웹훅 URL (DB 제거로 클라이언트가 직접 전달)
   webhookUrl: string;
   label: string;
   raidSize: number;

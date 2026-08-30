@@ -177,7 +177,7 @@ async function fetchWclBestPerfDetails(characterName: string, realmSlug: string)
     let bestCandidate: (WclBestPerfDetails & { zoneId: number | null; peak: number }) | null = null;
 
     for (const metric of metrics) {
-      // metric is an enum (CharacterRankingMetricType) — kept inline since it's hardcoded
+      // metric은 GraphQL enum이라 변수 바인딩이 안 된다. 고정값이므로 쿼리에 직접 넣는다.
       const query = `
         query($name: String!, $server: String!, $region: String!) {
           characterData {

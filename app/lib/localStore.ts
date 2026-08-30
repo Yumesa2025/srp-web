@@ -1,8 +1,8 @@
 /**
  * 브라우저 로컬 저장소 래퍼
  *
- * 저장 데이터를 Supabase에서 localStorage로 옮기면서, 각 훅이 제각각
- * localStorage를 직접 다루지 않도록 여기로 모았다. 담당하는 일은 다음과 같다.
+ * 앱의 유일한 저장 진입점이다. 각 훅이 localStorage를 직접 다루면 처리 방식이
+ * 갈라지므로 다음 네 가지를 여기서 전담한다.
  *
  * - SSR 가드: 서버에는 localStorage가 없다. 서버에서 호출되면 기본값을 준다.
  * - 스키마 버전: 저장값에 버전을 함께 적어두고, 버전이 다르면 마이그레이터에
@@ -26,11 +26,10 @@ export const StoreKeys = {
   rosters: "rosters",
   raidSessions: "raidSessions",
   raidItems: "raidItems",
-  defensiveSettings: "defensiveSettings",
   discordWebhookUrl: "discordWebhookUrl",
 } as const;
 
-export type StoreKey = (typeof StoreKeys)[keyof typeof StoreKeys];
+type StoreKey = (typeof StoreKeys)[keyof typeof StoreKeys];
 
 /** 실제 localStorage 키. 예: srp:v1:rosters */
 function fullKey(key: StoreKey): string {
@@ -51,9 +50,7 @@ function isBrowser(): boolean {
  * 구버전 저장값을 현재 버전으로 올리는 변환기.
  * 변환할 수 없으면 null을 반환해 기본값으로 떨어지게 한다.
  */
-export type Migrator<T> = (data: unknown, fromVersion: number) => T | null;
-
-// ── 구독 ────────────────────────────────────────────────
+type Migrator<T> = (data: unknown, fromVersion: number) => T | null;
 
 const listeners = new Set<() => void>();
 
@@ -87,8 +84,6 @@ export function notifyStoreChange(): void {
   snapshotCache.clear();
   emitChange();
 }
-
-// ── 스냅샷 ──────────────────────────────────────────────
 
 interface CacheEntry {
   /** 이 값을 만들어낸 원본 문자열. 같으면 파싱 결과를 재사용한다. */
@@ -155,7 +150,7 @@ export function readStore<T>(key: StoreKey, fallback: T, migrate?: Migrator<T>):
   return value;
 }
 
-export interface WriteResult {
+interface WriteResult {
   /** 실패 시에만 채워지는 한국어 사용자 메시지 */
   error?: string;
 }
@@ -184,20 +179,7 @@ export function writeStore<T>(key: StoreKey, data: T): WriteResult {
   return {};
 }
 
-/** 저장값을 지운다. */
-export function removeStore(key: StoreKey): void {
-  if (!isBrowser()) return;
-  try {
-    window.localStorage.removeItem(fullKey(key));
-  } catch {
-    // 지우기 실패는 무시해도 무방하다
-    return;
-  }
-  snapshotCache.delete(key);
-  emitChange();
-}
-
-/** 로컬 저장 레코드의 id 생성기 — DB가 주던 UUID를 대신한다 */
+/** 로컬 저장 레코드의 id 생성기 */
 export function newId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();

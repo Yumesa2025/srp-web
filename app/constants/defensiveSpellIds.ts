@@ -1,4 +1,4 @@
-// spell ID → display name (Korean) — icon fetched from Wowhead at runtime
+// 생존기로 집계할 스펠 ID 목록. WCL 이벤트의 abilityGameID와 대조한다.
 export const DEFENSIVE_SPELL_IDS = new Set<number>([
   // Warrior
   871,    // Shield Wall

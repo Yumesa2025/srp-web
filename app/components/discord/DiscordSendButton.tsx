@@ -4,10 +4,9 @@ import { useState } from 'react';
 
 interface Props {
   onSend: () => Promise<void>;
-  label?: string;
 }
 
-export default function DiscordSendButton({ onSend, label = 'Discord 전송' }: Props) {
+export default function DiscordSendButton({ onSend }: Props) {
   const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -42,7 +41,7 @@ export default function DiscordSendButton({ onSend, label = 'Discord 전송' }: 
           {status === 'sending' ? '전송 중...' :
            status === 'ok'      ? '전송됨 ✓' :
            status === 'error'   ? '전송 실패' :
-           label}
+           'Discord 전송'}
         </span>
       </button>
       {status === 'error' && errorMsg && (

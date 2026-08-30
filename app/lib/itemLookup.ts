@@ -4,7 +4,7 @@ const FALLBACK_ICON_URL = "https://wow.zamimg.com/images/wow/icons/large/inv_mis
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24h
 const ERROR_TTL_MS = 1000 * 60 * 10; // 10m
 
-export interface ItemLookupResult {
+interface ItemLookupResult {
   id: string;
   name: string;
   iconUrl: string;

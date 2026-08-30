@@ -1,5 +1,5 @@
 // TWW(The War Within) 보스 이름 영 → 한 매핑
-export const TWW_BOSS_NAMES: Record<string, string> = {
+const TWW_BOSS_NAMES: Record<string, string> = {
   // 네루바르 궁전 (Nerub-ar Palace) - 시즌 1
   "Ulgrax the Devourer": "삼키는 자 울그락스",
   "The Bloodbound Horror": "선혈의 공포",

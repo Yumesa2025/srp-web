@@ -4,7 +4,7 @@ const FALLBACK_ICON_URL = "https://wow.zamimg.com/images/wow/icons/large/inv_mis
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24h
 const ERROR_TTL_MS = 1000 * 60 * 10; // 10m
 
-export interface SpellLookupResult {
+interface SpellLookupResult {
   id: string;
   name: string;
   iconUrl: string;
@@ -93,7 +93,7 @@ async function lookupFromWowhead(spellId: string): Promise<SpellLookupResult> {
         "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
       },
       throwHttpErrors: false,
-      // Let Next cache remote response as well.
+      // 원격 응답도 Next 캐시에 태운다
       next: { revalidate: 60 * 60 * 24 },
     });
     if (!res.ok) continue;

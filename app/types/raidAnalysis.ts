@@ -1,8 +1,3 @@
-export interface DefensiveEntry {
-  id?: number;    // spell ID for exact matching
-  name: string;   // display name
-}
-
 export interface RaidFight {
   id: number;
   name: string;

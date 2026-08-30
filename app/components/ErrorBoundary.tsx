@@ -4,7 +4,6 @@ import { Component, ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
 }
 
 interface State {
@@ -25,8 +24,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   override render() {
     if (this.state.hasError) {
       return (
-        this.props.fallback ?? (
-          <div className="my-8 p-6 bg-red-900/30 border border-red-700 rounded-xl text-center">
+        (          <div className="my-8 p-6 bg-red-900/30 border border-red-700 rounded-xl text-center">
             <p className="text-red-400 font-bold mb-2">오류가 발생했습니다</p>
             <p className="text-red-300 text-sm mb-4">{this.state.message}</p>
             <button
