@@ -12,7 +12,6 @@ import { getSpecIconUrl } from '@/app/constants/specIcons';
 interface Props {
   allPlayers: AllPlayerData[];
   bloodlusts: BloodlustEvent[];
-  durationSec: number;
   makePlayerUrl: (actorId: number) => string;
 }
 
@@ -68,7 +67,6 @@ function PlayerCard({
 
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-700 p-4 hover:border-gray-600 transition-colors">
-      {/* 헤더 */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
           {iconUrl && <img src={iconUrl} alt="" className="w-6 h-6 rounded shrink-0" />}
@@ -98,7 +96,6 @@ function PlayerCard({
         </div>
       </div>
 
-      {/* 서브 스탯 */}
       <div className="flex gap-4 mb-2 text-xs text-gray-500 flex-wrap">
         <span>{totalLabel} <span className="text-gray-200 font-semibold">{formatK(totalValue)}</span></span>
         <span>최고 <span className="text-gray-200 font-semibold">{formatK(maxValue)}</span></span>
@@ -110,10 +107,8 @@ function PlayerCard({
         )}
       </div>
 
-      {/* 그래프 */}
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={timeline} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-          {/* 블러드러스트 구간 */}
           {bloodlusts.map((bl, i) => (
             <ReferenceArea
               key={`bl-${i}`}
@@ -125,7 +120,6 @@ function PlayerCard({
               label={{ value: '🔴', position: 'insideTop', fontSize: 11 }}
             />
           ))}
-          {/* 마력주입 구간 */}
           {piTimings.map((t, i) => (
             <ReferenceArea
               key={`pi-${i}`}
@@ -137,7 +131,6 @@ function PlayerCard({
               label={{ value: '💙', position: 'insideTop', fontSize: 11 }}
             />
           ))}
-          {/* 생존기 세로선 */}
           {defensiveCasts.map((c, i) => (
             <ReferenceLine
               key={`def-${i}`}
@@ -183,8 +176,7 @@ function PlayerCard({
   );
 }
 
-export default function DpsGraphSection({ allPlayers, bloodlusts, durationSec, makePlayerUrl }: Props) {
-  void durationSec;
+export default function DpsGraphSection({ allPlayers, bloodlusts, makePlayerUrl }: Props) {
   const [collapsed, setCollapsed] = useState(false);
 
   if (allPlayers.length === 0) {

@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import { PostHogProvider as PostHogReactProvider } from "posthog-js/react";
 
-// [중요] 초기화 로직을 컴포넌트 외부로 이동 (브라우저 로드 즉시 실행)
+// 모듈 최상위에서 한 번만 초기화한다 — 컴포넌트 안에 두면 리렌더마다 재실행된다
 if (typeof window !== "undefined") {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
@@ -21,7 +21,6 @@ if (typeof window !== "undefined") {
   }
 }
 
-// 별도 컴포넌트로 분리하여 페이지뷰 추적
 function PostHogPageviewTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();

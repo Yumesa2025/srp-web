@@ -3,8 +3,7 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { notifyStoreChange, subscribeStore } from '@/app/lib/localStore';
 
-// 기존 사용자의 "이미 봤음" 상태를 보존하기 위해 예전 키를 그대로 쓴다.
-// localStore 네임스페이스 밖이라 쓰기 후 직접 변경을 알린다.
+// localStore 네임스페이스 밖의 키라 쓰기 후 직접 변경을 알린다.
 const STORAGE_KEY = 'srp_tutorial_seen';
 
 function hasSeenTutorial(): boolean {
@@ -19,12 +18,7 @@ function hasSeenTutorial(): boolean {
 // 서버 렌더에는 저장소가 없다. 첫 렌더에서 튜토리얼이 깜빡이지 않도록 본 것으로 둔다.
 const seenOnServer = () => true;
 
-/**
- * 첫 방문 여부 판별
- *
- * 예전에는 로그인 사용자의 profiles.tutorial_completed를 함께 봤지만, 로그인이
- * 사라지면서 브라우저 로컬 기록만 남았다.
- */
+/** 첫 방문 여부 판별 */
 export function useTutorialFirstVisit() {
   const seen = useSyncExternalStore(subscribeStore, hasSeenTutorial, seenOnServer);
   // 이번 세션에서 닫은 경우. 저장에 실패해도 다시 뜨지 않게 한다.

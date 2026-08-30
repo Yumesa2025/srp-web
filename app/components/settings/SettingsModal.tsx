@@ -7,14 +7,8 @@ interface Props {
   onClose: () => void;
 }
 
-/**
- * 설정 모달
- *
- * 로그인을 제거하면서 프로필 모달이 사라졌는데, Discord 웹훅 설정 UI가 그 안에만
- * 있었다. 로그인 없이도 접근할 수 있는 자리로 옮겨 담는 것이 이 모달의 역할이다.
- */
+/** 브라우저에 저장되는 사용자 설정을 모아두는 모달 */
 export default function SettingsModal({ onClose }: Props) {
-  // ESC로 닫기
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();

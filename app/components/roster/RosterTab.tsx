@@ -119,12 +119,10 @@ export default function RosterTab({
 
   return (
     <>
-      {/* 새로고침 안내 */}
       <div className="mb-4 px-4 py-2 bg-yellow-900/30 border border-yellow-700/60 rounded-lg text-yellow-300 text-sm">
         💾 명단은 새로고침하면 사라집니다. 오른쪽 <span className="font-bold">명단 저장소</span>에서 저장해두세요.
       </div>
 
-      {/* 파티원 명단 입력 */}
       <div data-tour="roster-input" className="mb-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
         <div className="flex justify-between items-start gap-4 mb-2">
           <label className="block text-gray-300 font-semibold">
@@ -154,7 +152,6 @@ export default function RosterTab({
             이미 추가된 캐릭터 스킵: {skippedDuplicates.join(", ")}
           </div>
         )}
-        {/* 로딩 스켈레톤 */}
         {isLoading && (
           <div className="mt-4 space-y-2">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -164,11 +161,9 @@ export default function RosterTab({
         )}
       </div>
 
-      {/* 인원 카운터 + 구성 복사 */}
       <div data-tour="roster-actions" className="mb-3 flex justify-end items-center gap-2">
         {players.length > 0 && (
           <DiscordSendButton
-            label="Discord 전송"
             onSend={async () => {
               const webhookUrl = getStoredWebhookUrl();
               if (!webhookUrl) {
@@ -202,9 +197,7 @@ export default function RosterTab({
         </div>
       </div>
 
-      {/* 직업 상태 + 갑옷 타입 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* 직업 상태 */}
         <div className="p-6 md:p-7 rounded-2xl border-2 border-cyan-400/35 bg-linear-to-br from-gray-800 via-gray-800/95 to-gray-900 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
             <div className="text-lg md:text-xl text-cyan-300 font-bold">직업 상태</div>
@@ -231,7 +224,6 @@ export default function RosterTab({
           </div>
         </div>
 
-        {/* 갑옷 타입 */}
         <div className="p-6 md:p-7 rounded-2xl border-2 border-cyan-400/35 bg-linear-to-br from-gray-800 via-gray-800/95 to-gray-900 shadow-[0_10px_25px_rgba(0,0,0,0.35)]">
           <div className="text-lg md:text-xl text-cyan-300 font-bold mb-4">갑옷 타입</div>
           <div className="grid grid-cols-2 gap-4">
@@ -245,7 +237,6 @@ export default function RosterTab({
         </div>
       </div>
 
-      {/* 미분류 대기소 */}
       <div data-tour="roster-unassigned" className="mb-6">
         <RaidZone
           role="UNASSIGNED" title="❓ 미분류 대기소" bgColor="bg-gray-800/50"
@@ -254,7 +245,6 @@ export default function RosterTab({
         />
       </div>
 
-      {/* 4분할 레이드 구역 */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         {([
           { role: "TANK", title: "🛡️ 방어 전담 (Tank)", bgColor: "bg-blue-900/20" },

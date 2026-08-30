@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/app/lib/api";
 import LazyImage from "@/app/components/LazyImage";
-import { useMarketStorage } from "@/app/hooks/useMarketStorage";
+import { useMarketStorage, type RaidSession } from "@/app/hooks/useMarketStorage";
 import RaidSavePanel from "./RaidSavePanel";
 import RaidHistorySection from "./RaidHistorySection";
 import DiscordSendButton from "@/app/components/discord/DiscordSendButton";
@@ -78,7 +78,6 @@ export default function RaidMarketTab() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── 정산 계산 ──────────────────────────────────────────────
   const payout = useMemo(() => {
     const safeSize    = sanitizeInt(raidSize, 20, 1);
     const safeExpense = sanitizeInt(raidExpense, 0);
@@ -96,7 +95,6 @@ export default function RaidMarketTab() {
     [ledgerItems]
   );
 
-  // ── 아이템 메타 조회 ────────────────────────────────────────
   const resolveItemMeta = async (ids: string[]) => {
     const toFetch = ids.filter((id) => !metaCacheRef.current.has(id));
     if (!toFetch.length) return;
@@ -120,7 +118,6 @@ export default function RaidMarketTab() {
     finally { setIsMetaLoading(false); }
   };
 
-  // ── 장부 파싱 ──────────────────────────────────────────────
   const processLedger = async (inputOverride?: string) => {
     const input  = inputOverride ?? ledgerInput;
     const rawRows = input.split(/[\n|]+/g).map((r) => r.trim()).filter(Boolean);
@@ -158,8 +155,7 @@ export default function RaidMarketTab() {
     if (validIds.length) await resolveItemMeta(validIds);
   };
 
-  // ── 회차 불러오기 콜백 ──────────────────────────────────────
-  const handleLoadSession = (session: { label: string; raw_input: string; raid_size: number; raid_expense: number }) => {
+  const handleLoadSession = (session: RaidSession) => {
     setLedgerInput(session.raw_input);
     setRaidSize(session.raid_size);
     setRaidExpense(session.raid_expense);
@@ -167,7 +163,6 @@ export default function RaidMarketTab() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ── 정산 복사 ─────────────────────────────────────────────
   const copySettlement = async () => {
     if (!ledgerItems.length) return;
     const lines = [
@@ -195,10 +190,8 @@ export default function RaidMarketTab() {
 
   return (
     <div className="space-y-0">
-      {/* ── 메인 카드 ─────────────────────────────────────────── */}
       <div className="p-6 bg-gray-800 rounded-xl border border-yellow-500/30 shadow-xl">
 
-        {/* 헤더 */}
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-yellow-400 flex items-center gap-2">
@@ -213,7 +206,6 @@ export default function RaidMarketTab() {
           )}
         </div>
 
-        {/* 입력 영역 */}
         <textarea
           data-tour="market-input"
           value={ledgerInput}
@@ -240,7 +232,6 @@ export default function RaidMarketTab() {
           </button>
           {ledgerItems.length > 0 && (
             <DiscordSendButton
-              label="Discord 전송"
               onSend={async () => {
                 const webhookUrl = getStoredWebhookUrl();
                 if (!webhookUrl) {
@@ -269,7 +260,6 @@ export default function RaidMarketTab() {
           </button>
         </div>
 
-        {/* 경고 */}
         {parseIssues.length > 0 && (
           <div className="mt-4 p-3.5 rounded-xl border border-amber-700/40 bg-amber-950/20">
             <p className="text-amber-300 font-semibold text-xs mb-1.5">⚠ 입력 경고 {parseIssues.length}건</p>
@@ -281,10 +271,8 @@ export default function RaidMarketTab() {
           </div>
         )}
 
-        {/* 결과 */}
         {ledgerItems.length > 0 && (
           <div className="mt-5 grid grid-cols-1 xl:grid-cols-3 gap-5">
-            {/* ── 아이템 목록 ── */}
             <div className="xl:col-span-2 bg-gray-900 rounded-xl border border-gray-700 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
                 <h3 className="text-gray-300 font-bold text-xl">📦 거래 내역</h3>
@@ -325,9 +313,7 @@ export default function RaidMarketTab() {
               </div>
             </div>
 
-            {/* ── 계산기 + 저장 ── */}
             <div className="flex flex-col gap-4">
-              {/* 계산기 */}
               <div data-tour="market-calculator" className="bg-gray-900 rounded-xl border border-gray-700 p-4">
                 <h3 className="text-yellow-300 font-bold text-xl mb-4 flex items-center gap-1.5">
                   🧮 분배 계산기
@@ -374,7 +360,6 @@ export default function RaidMarketTab() {
                   ))}
                 </div>
 
-                {/* 1인당 */}
                 <div className="mt-4 p-4 bg-gray-800 rounded-xl border border-yellow-500/40 text-center">
                   <p className="text-gray-500 text-sm mb-1">최종 1인당 분배금</p>
                   <p className="text-5xl font-bold text-yellow-200">
@@ -395,7 +380,6 @@ export default function RaidMarketTab() {
           </div>
         )}
 
-        {/* 저장 패널 (아이템 있을 때) */}
         {ledgerItems.length > 0 && (
           <div data-tour="market-save">
             <RaidSavePanel
@@ -413,7 +397,6 @@ export default function RaidMarketTab() {
 
       </div>
 
-      {/* ── 누적 기록 섹션 ───────────────────────── */}
       <div data-tour="market-history">
         <RaidHistorySection
           sessions={storage.sessions}

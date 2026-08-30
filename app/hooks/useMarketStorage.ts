@@ -59,16 +59,13 @@ function readItems(): RaidItemRecord[] {
 /**
  * 공대거래 회차 저장소
  *
- * 예전에는 클라이언트가 Supabase(raid_sessions / raid_items)를 RLS에 기대어 직접
- * 호출했다. 로그인이 사라지면서 두 테이블을 로컬 저장소의 배열 두 개로 옮겼다.
- *
- * DB가 해주던 일 중 두 가지를 여기서 직접 한다.
- * - id 생성: UUID를 클라이언트에서 만든다.
+ * 회차와 아이템을 별도 키로 나눠 보관한다. 관계형 DB가 아니므로 다음 두 가지를
+ * 직접 처리한다.
+ * - id 생성: crypto.randomUUID()로 만든다.
  * - 연쇄 삭제: 회차를 지우면 그 회차에 속한 아이템도 함께 지운다.
  *
- * 공개 인터페이스는 Supabase 시절과 같게 유지했다. 로그인 개념이 없어졌으므로
- * isLoggedIn만 빠졌다. saveSession/fetchAllItems/deleteSession은 이제 동기
- * 작업이지만, 호출부를 바꾸지 않으려고 Promise를 유지한다.
+ * saveSession/fetchAllItems/deleteSession은 실제로는 동기 작업이지만, 저장 위치가
+ * 바뀌어도 호출부가 흔들리지 않도록 Promise 인터페이스를 유지한다.
  */
 export function useMarketStorage() {
   const sessions = useSyncExternalStore(subscribeStore, readSessions, () => EMPTY_SESSIONS);

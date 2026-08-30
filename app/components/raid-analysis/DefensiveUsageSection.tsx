@@ -24,7 +24,7 @@ export default function DefensiveUsageSection({ players, makePlayerUrl }: Props)
         </button>
         <div>
           <h3 className="text-cyan-300 font-bold text-2xl">🛡️ 생존기 사용 현황</h3>
-          <p className="text-xl text-gray-500 mt-0.5">설정된 생존기 기준 사용 횟수 및 타이밍</p>
+          <p className="text-xl text-gray-500 mt-0.5">직업별 주요 생존기 사용 횟수 및 타이밍</p>
         </div>
       </div>
 

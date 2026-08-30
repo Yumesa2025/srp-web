@@ -4,7 +4,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import { newId, readStore, StoreKeys, subscribeStore, writeStore } from "@/app/lib/localStore";
 import { useStoreHydrated } from "@/app/hooks/useStoreHydrated";
 
-export interface RosterRecord {
+interface RosterRecord {
   id: string;
   name: string;
   content: string;
@@ -20,7 +20,7 @@ function readRosters(): RosterRecord[] {
 }
 
 /**
- * 명단 저장소 — 기존 roster Server Action(saveRoster/loadRosters/deleteRoster)을 대체한다.
+ * 명단 저장소
  *
  * 서버에는 저장값이 없으므로 첫 렌더에서는 빈 목록이 나오고, 하이드레이션이
  * 끝나면 실제 값으로 바뀐다. 그 사이를 isLoading으로 표시한다.

@@ -9,7 +9,7 @@ const WEBHOOK_PREFIX = "https://discord.com/api/webhooks/";
 
 const EMPTY = "";
 
-export function isValidWebhookUrl(url: string): boolean {
+function isValidWebhookUrl(url: string): boolean {
   return url.startsWith(WEBHOOK_PREFIX);
 }
 
@@ -23,7 +23,7 @@ export function getStoredWebhookUrl(): string {
 }
 
 /**
- * Discord 웹훅 URL 저장소 — 기존 user_settings 테이블과 discord Server Action을 대체한다.
+ * Discord 웹훅 URL 저장소
  *
  * 저장된 URL은 전송 시 /api/discord 요청 body에 실려 서버로 간다. 서버도 같은
  * 접두사 검증을 다시 수행하므로, 여기 검증은 사용자 입력을 즉시 걸러내기 위한 것이다.

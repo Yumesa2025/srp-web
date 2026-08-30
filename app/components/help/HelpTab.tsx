@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 
-type HelpSection = 'addon' | 'account';
+type HelpSection = 'addon' | 'usage';
 
 const TABS: { id: HelpSection; label: string }[] = [
   { id: 'addon',   label: '애드온' },
-  { id: 'account', label: '회원'   },
+  { id: 'usage',   label: '이용 안내' },
 ];
 
 interface Props {
@@ -24,7 +24,6 @@ export default function HelpTab({ onOpenTutorial }: Props) {
         <p className="text-xl text-gray-500">SRP 사용 방법을 안내합니다.</p>
       </div>
 
-      {/* 서브 탭 */}
       <div className="flex gap-1 p-1 bg-gray-800/60 rounded-xl border border-gray-700">
         {TABS.map(tab => (
           <button
@@ -41,10 +40,9 @@ export default function HelpTab({ onOpenTutorial }: Props) {
         ))}
       </div>
 
-      {/* 탭 내용 */}
       <div className="p-6 bg-gray-800/60 rounded-xl border border-gray-700 min-h-[400px]">
         {active === 'addon'   && <AddonHelp />}
-        {active === 'account' && <AccountHelp onOpenTutorial={onOpenTutorial} />}
+        {active === 'usage'   && <UsageHelp onOpenTutorial={onOpenTutorial} />}
       </div>
     </div>
   );
@@ -130,11 +128,10 @@ function AddonHelp() {
   );
 }
 
-function AccountHelp({ onOpenTutorial }: { onOpenTutorial: () => void }) {
+function UsageHelp({ onOpenTutorial }: { onOpenTutorial: () => void }) {
   return (
     <div className="space-y-10">
 
-      {/* 튜토리얼 다시보기 */}
       <div className="p-5 bg-cyan-900/20 border border-cyan-700/40 rounded-xl flex items-center justify-between gap-4">
         <div>
           <p className="text-white font-bold text-lg">SRP 튜토리얼</p>

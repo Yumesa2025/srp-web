@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { HTTPError, TimeoutError } from "ky";
-import { DEFENSIVE_SKILLS } from "@/app/constants/defensiveSkills";
 import { MainTab, PlayerData, RoleType } from "@/app/types";
 import { api } from "@/app/lib/api";
 
@@ -48,7 +47,6 @@ export default function Home() {
   const handleWelcomeStart = () => {
     setWelcomeOpen(false);
     markSeen();
-    // 웰컴 팝업에서 시작 → ROSTER 탭 투어 시작
     setTimeout(() => startTour("ROSTER"), 300);
   };
 
@@ -56,7 +54,6 @@ export default function Home() {
     setMountedTabs(prev => new Set(prev).add(tab));
     setActiveTab(tab);
     analytics.trackTabChange(tab);
-    // 해당 탭을 처음 방문하는 경우 투어 자동 시작
     if (!hasSeenTab(tab)) {
       setTimeout(() => startTour(tab), 300);
     }
@@ -123,7 +120,6 @@ export default function Home() {
 
           const resolvedName = typeof data.name === "string" && data.name.trim() ? data.name : name;
           const resolvedRealm = typeof data.realm === "string" && data.realm.trim() ? data.realm : realm;
-          const myDefensives = data.talents?.filter((t: string) => DEFENSIVE_SKILLS.includes(t)) || [];
 
           return {
             id: `${resolvedName}-${resolvedRealm}`.toLowerCase(),
@@ -136,7 +132,6 @@ export default function Home() {
             className: data.className,
             bestPerfAvg: data.bestPerfAvg,
             bestPerfDetails: data.bestPerfDetails ?? null,
-            defensives: myDefensives.map((d: string) => ({ name: d, isActive: true })),
             role: guessRole(data.activeSpec),
           };
         } catch (err) {
@@ -248,8 +243,7 @@ export default function Home() {
           <div className={activeTab === "HELP" ? "" : "hidden"}>
             <ErrorBoundary>
               <HelpTab onOpenTutorial={() => {
-                // 모든 탭 seen 초기화 → ROSTER로 이동 → 투어 시작
-                // (이후 거래/분석 탭 첫 방문 시에도 투어 자동 재실행)
+                // 투어 기록을 지워 거래·분석 탭도 첫 방문처럼 다시 안내되게 한다
                 resetAllTours();
                 handleTabChange("ROSTER");
                 setTimeout(() => startTour("ROSTER"), 300);

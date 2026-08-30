@@ -46,7 +46,6 @@ export default function RaidAnalysisTab() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError]           = useState('');
 
-  // 전투 목록 불러오기
   const loadFights = useCallback(async (overrideUrl?: string) => {
     const raw = overrideUrl ?? urlInput;
     const code = extractCode(raw);
@@ -72,7 +71,6 @@ export default function RaidAnalysisTab() {
     }
   }, [urlInput]);
 
-  // 전투 선택 → 분석
   const analyzeFight = useCallback(async (fight: RaidFight) => {
     setSelectedFightId(fight.id);
     setAnalysis(null);
@@ -105,7 +103,6 @@ export default function RaidAnalysisTab() {
 
   return (
     <div className="space-y-6">
-      {/* ── 헤더 입력 ──────────────────────────────────────────── */}
       <div data-tour="analysis-input" className="p-6 bg-gray-800 rounded-xl border border-gray-700 shadow-lg">
         <div className="mb-4">
           <h2 className="text-xl font-bold text-cyan-400 flex items-center gap-2">
@@ -151,7 +148,6 @@ export default function RaidAnalysisTab() {
         )}
       </div>
 
-      {/* ── 전투 목록 ─────────────────────────────────────────── */}
       {fights.length > 0 && (
         <div className="bg-gray-800/60 rounded-xl border border-gray-700 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-700/60 flex items-center justify-between">
@@ -206,7 +202,6 @@ export default function RaidAnalysisTab() {
         </div>
       )}
 
-      {/* ── 분석 로딩 ─────────────────────────────────────────── */}
       {isAnalyzing && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <div className="w-10 h-10 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
@@ -214,10 +209,8 @@ export default function RaidAnalysisTab() {
         </div>
       )}
 
-      {/* ── 분석 결과 ─────────────────────────────────────────── */}
       {analysis && !isAnalyzing && (
         <div className="space-y-5">
-          {/* 분석 헤더 */}
           <div className="p-5 bg-gray-800 rounded-xl border border-cyan-500/30">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -254,7 +247,7 @@ export default function RaidAnalysisTab() {
               <>
                 <DeathAnalysisSection deaths={analysis.earlyDeaths} makePlayerUrl={makePlayerUrl} />
                 <ConsumablesSection consumables={analysis.consumables} makePlayerUrl={makePlayerUrl} />
-                <DpsGraphSection allPlayers={analysis.allPlayers} bloodlusts={analysis.bloodlusts} durationSec={analysis.fight.durationSec} makePlayerUrl={makePlayerUrl} />
+                <DpsGraphSection allPlayers={analysis.allPlayers} bloodlusts={analysis.bloodlusts} makePlayerUrl={makePlayerUrl} />
                 <DefensiveUsageSection players={analysis.defensiveUsage} makePlayerUrl={makePlayerUrl} />
               </>
             );

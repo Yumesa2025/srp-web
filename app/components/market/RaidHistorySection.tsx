@@ -106,7 +106,6 @@ export default function RaidHistorySection({
 
   return (
     <div className="mt-6 rounded-xl bg-gray-800/60 border border-purple-500/20">
-      {/* 헤더 */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700/60">
         <div>
           <h3 className="text-purple-300 font-bold text-base">📊 누적 기록</h3>
@@ -114,7 +113,6 @@ export default function RaidHistorySection({
             {sessions.length}회차 저장됨 · 누적 모금 {totalGoldAll.toLocaleString()}G
           </p>
         </div>
-        {/* 탭 */}
         <div className="flex gap-1">
           {TABS.map(({ key, label }) => (
             <button
@@ -132,10 +130,8 @@ export default function RaidHistorySection({
         </div>
       </div>
 
-      {/* 탭 콘텐츠 */}
       <div className="p-5">
 
-        {/* ── 회차 목록 ── */}
         {tab === "sessions" && (
           <>
             {isLoading ? (
@@ -153,12 +149,10 @@ export default function RaidHistorySection({
                     key={session.id}
                     className="bg-gray-900 rounded-xl border border-gray-700 hover:border-purple-500/40 transition-colors p-4 flex flex-col gap-3"
                   >
-                    {/* 제목 + 날짜 */}
                     <div>
                       <p className="text-white font-bold text-sm leading-tight">{session.label}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{formatDate(session.created_at)}</p>
                     </div>
-                    {/* 골드 스탯 */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-gray-800 rounded-lg p-2.5 text-center">
                         <p className="text-xs text-gray-500 mb-0.5">총 모금</p>
@@ -169,11 +163,9 @@ export default function RaidHistorySection({
                         <p className="text-yellow-300 font-bold text-sm">{session.per_person.toLocaleString()}G</p>
                       </div>
                     </div>
-                    {/* 인원 / 공대비 */}
                     <p className="text-xs text-gray-600">
                       {session.raid_size}인 · 공대비 {session.raid_expense.toLocaleString()}G
                     </p>
-                    {/* 버튼 */}
                     <div className="flex gap-2 mt-auto">
                       <button
                         onClick={() => { onLoadSession(session); setConfirmDeleteId(null); }}
@@ -212,7 +204,6 @@ export default function RaidHistorySection({
           </>
         )}
 
-        {/* ── 아이템 통계 ── */}
         {tab === "items" && (
           <>
             {isItemsLoading ? (
@@ -224,7 +215,6 @@ export default function RaidHistorySection({
               </div>
             ) : (
               <>
-                {/* 정렬 옵션 */}
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xs text-gray-500">정렬:</span>
                   {(
@@ -249,7 +239,6 @@ export default function RaidHistorySection({
                   <span className="ml-auto text-xs text-gray-600">총 {sortedStats.length}종 아이템</span>
                 </div>
 
-                {/* 테이블 */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -316,7 +305,6 @@ export default function RaidHistorySection({
           </>
         )}
 
-        {/* ── 골드 추이 ── */}
         {tab === "gold" && (
           <>
             {sessions.length === 0 ? (
@@ -348,7 +336,6 @@ export default function RaidHistorySection({
                           <span className="text-gray-600 text-xs ml-1">/ 인</span>
                         </div>
                       </div>
-                      {/* 바 차트 */}
                       <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${

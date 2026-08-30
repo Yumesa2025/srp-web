@@ -42,7 +42,6 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                     : 'bg-gray-900 border-gray-700 hover:border-red-500/30 transition-colors'
                 }`}
               >
-                {/* 헤더: 순위 + 이름 + HP */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-black shrink-0 ${
@@ -82,7 +81,6 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                   <p className="text-sm text-gray-500">{death.skipReason}</p>
                 ) : (
                   <>
-                    {/* 사망 원인 */}
                     <div>
                       <p className="text-gray-500 text-base mb-1">사망 원인</p>
                       <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-red-900/40 border border-red-800/40 text-red-300 text-xl rounded-md font-semibold">
@@ -91,7 +89,6 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                       </span>
                     </div>
 
-                    {/* 직전 5초 받은 피해 */}
                     {death.incomingDamage && (
                       <div>
                         <p className="text-gray-500 text-base mb-1">
@@ -107,7 +104,6 @@ export default function DeathAnalysisSection({ deaths, makePlayerUrl }: Props) {
                       </div>
                     )}
 
-                    {/* 생존기 */}
                     <div>
                       <p className="text-gray-500 text-base mb-1">생존기</p>
                       {death.defensivesUsed.length > 0 ? (

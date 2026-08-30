@@ -17,10 +17,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Smart Raid Planner (SRP) 베타",
-  description: "WoW 공대 구성, 전술 편집, 클리닉 분석을 한 곳에서. Smart Raid Planner.",
+  description: "WoW 공대 구성, 공대 거래 정산, 전투 분석을 한 곳에서. Smart Raid Planner.",
   openGraph: {
     title: "Smart Raid Planner (SRP) 베타",
-    description: "WoW 공대 구성, 전술 편집, 클리닉 분석을 한 곳에서. Smart Raid Planner.",
+    description: "WoW 공대 구성, 공대 거래 정산, 전투 분석을 한 곳에서. Smart Raid Planner.",
     url: "https://healthy-feedback.com",
     siteName: "Smart Raid Planner",
     images: [
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Smart Raid Planner (SRP) 베타",
-    description: "WoW 공대 구성, 전술 편집, 클리닉 분석을 한 곳에서. Smart Raid Planner.",
+    description: "WoW 공대 구성, 공대 거래 정산, 전투 분석을 한 곳에서. Smart Raid Planner.",
     images: ["https://healthy-feedback.com/og/srp.jpg"],
   },
 };

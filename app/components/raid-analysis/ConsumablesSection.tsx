@@ -52,7 +52,7 @@ export default function ConsumablesSection({ consumables, makePlayerUrl }: Props
           </button>
           <div>
             <h3 className="text-yellow-300 font-bold text-2xl">💊 소모품 체크</h3>
-            <p className="text-xl text-gray-500 mt-0.5">공격물약 · 생명석 · 치유물약</p>
+            <p className="text-xl text-gray-500 mt-0.5">공격물약 · 생명석 · 치유물약 · 증강의 룬</p>
           </div>
         </div>
         <div className="flex gap-4 text-xl text-gray-500">
