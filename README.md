@@ -24,11 +24,30 @@ World of Warcraft 레이드 공대장을 위한 올인원 관리 도구.
 
 - **Framework**: Next.js 16 (App Router) · TypeScript
 - **Styling**: Tailwind CSS v4
-- **Auth / DB**: Supabase SSR (`@supabase/ssr`)
-- **Deployment**: Cloudflare Workers (OpenNext v1.7)
+- **인증**: 없음 — 로그인 없이 모든 기능 사용
+- **저장소**: 브라우저 localStorage (서버 DB 없음)
+- **Deployment**: Cloudflare Workers (OpenNext v1.20)
 - **Analytics**: PostHog
-- **AI**: Minimax API (공대분석 AI 요약)
 - **External API**: Warcraft Logs v2 GraphQL · Blizzard Battle.net API
+
+### 데이터는 어디에 저장되나
+
+명단과 공대거래 기록은 **사용하는 브라우저에만** 저장되며 서버로 전송되지 않는다.
+따라서 기기 간 동기화가 없고, 브라우저 데이터를 지우면 기록도 함께 사라진다.
+
+### 로컬 실행
+
+`.env.local`에 다음 4개만 있으면 된다. 예시는 `.dev.vars.example` 참고.
+
+```
+BLIZZARD_CLIENT_ID / BLIZZARD_CLIENT_SECRET   # 캐릭터 조회
+WCL_CLIENT_ID / WCL_CLIENT_SECRET             # 공대분석
+```
+
+```bash
+npm install
+npm run dev
+```
 
 ---
 
@@ -47,27 +66,28 @@ app/
     help/               # 도움말 탭
     tutorial/           # 웰컴 모달, 투어
     discord/            # Discord 웹훅 전송
-    profile/            # 프로필 모달
-    auth/               # 로그인 UI
-  actions/              # Server Actions (auth, roster, profile 등)
+    settings/           # 설정 모달 (Discord 웹훅 등록)
   api/
     character/          # Blizzard 캐릭터 조회
-    raid-analysis/      # 공대분석 통합 API
-    ai/                 # Minimax AI (로그 분석)
+    raid-analysis/      # 공대분석 통합 API (WCL)
     item/batch/         # 아이템 배치 조회
-    logs/               # WCL 로그 조회
-    wcl/                # WCL 타임라인
-    discord/            # Discord 웹훅
+    discord/            # Discord 웹훅 전송
     spell/              # 스펠 조회
+    logs/helpers.ts     # WCL GraphQL 헬퍼 (raid-analysis가 사용)
   hooks/
     useTour.ts          # Driver.js 스팟라이트 투어
-    useMarketStorage.ts # 공대거래 Supabase 저장
+    useLocalRosters.ts  # 명단 저장소
+    useMarketStorage.ts # 공대거래 회차 저장
+    useDiscordWebhook.ts
     useAnalytics.ts
   lib/
+    localStore.ts       # 로컬 저장소 래퍼 (유일한 저장 진입점)
+    defensiveStore.ts   # 방어 스킬 설정
     raidUtils.ts
     tokenCache.ts       # WCL/Blizzard OAuth 토큰 캐시
   types/
   constants/
+docs/superpowers/specs/ # 설계 문서
 ```
 
 ---
