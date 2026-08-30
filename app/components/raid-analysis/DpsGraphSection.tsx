@@ -3,7 +3,7 @@
 /* 외부 WoW 아이콘 CDN 이미지로, Workers 배포에서 next/image 최적화 이득이 없어 <img>를 유지한다 */
 /* eslint-disable @next/next/no-img-element */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, ReferenceLine } from 'recharts';
 import type { AllPlayerData, BloodlustEvent } from '@/app/types/raidAnalysis';
 import { getClassColor } from '@/app/constants/classColors';
@@ -48,8 +48,15 @@ function PlayerCard({
   const classColor = getClassColor(className);
   const iconUrl = getSpecIconUrl(specId);
   const isDpsTab = activeTab === 'dps';
-  const timeline = isDpsTab ? dpsTimeline : hpsTimeline;
-  const timelineKey = isDpsTab ? 'dps' : 'hps';
+  // dps/hps 타임라인은 값 필드 이름만 다르다. 차트에는 공통 형태로 넘겨야
+  // 데이터 타입이 탭에 따라 갈라지지 않는다.
+  const timeline = useMemo(
+    () =>
+      isDpsTab
+        ? dpsTimeline.map((point) => ({ sec: point.sec, value: point.dps }))
+        : hpsTimeline.map((point) => ({ sec: point.sec, value: point.hps })),
+    [isDpsTab, dpsTimeline, hpsTimeline]
+  );
   const lineColor = isDpsTab ? '#a78bfa' : '#34d399';
   const avgValue = isDpsTab ? avgDps : avgHps;
   const totalValue = isDpsTab ? totalDamage : totalHealing;
@@ -156,7 +163,7 @@ function PlayerCard({
             width={40}
           />
           <Tooltip
-            formatter={(v: number | undefined) => [`${formatK(v ?? 0)} ${avgLabel}`, '']}
+            formatter={(v) => [`${formatK(Number(v) || 0)} ${avgLabel}`, '']}
             labelFormatter={(label: unknown) => secToTime(Number(label))}
             contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: 8, fontSize: 12 }}
             itemStyle={{ color: lineColor }}
@@ -164,7 +171,7 @@ function PlayerCard({
           />
           <Line
             type="monotone"
-            dataKey={timelineKey}
+            dataKey="value"
             stroke={lineColor}
             strokeWidth={2}
             dot={false}
