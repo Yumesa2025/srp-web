@@ -1,21 +1,13 @@
-NEXTJS_ENV=development
+NEXTJS_ENV=
 
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# Minimax
-MINIMAX_API_KEY=
-
-# PostHog
+# PostHog (선택 — 없으면 분석 비활성)
 NEXT_PUBLIC_POSTHOG_KEY=
-NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+NEXT_PUBLIC_POSTHOG_HOST=
 
-# Blizzard
+# Blizzard (캐릭터 조회)
 BLIZZARD_CLIENT_ID=
 BLIZZARD_CLIENT_SECRET=
 
-# Warcraft Logs
+# Warcraft Logs (공대분석)
 WCL_CLIENT_ID=
 WCL_CLIENT_SECRET=

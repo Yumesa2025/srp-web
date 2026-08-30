@@ -48,7 +48,8 @@ Minimax 모두 200을 반환한다. 죽은 것은 Supabase 하나뿐이다.
 ### 저장 계층 구조: 단일 래퍼 + 기능별 훅
 
 각 훅이 `localStorage`를 직접 호출하는 방식은 처리 방식이 갈라진다. 실제로
-`useTour.ts:120`은 `JSON.parse` 실패를 처리하지 않아 저장값이 손상되면 앱이 깨진다.
+`useTour.ts`의 `getSeenTabs`는 `JSON.parse` 실패는 잡지만 파싱 결과가 배열이 아닌
+경우를 걸러내지 않아 뒤이은 `.includes`에서 터지고, 쓰기 쪽은 아예 감싸져 있지 않다.
 IndexedDB는 이 데이터 규모에 과하다.
 
 `app/lib/localStore.ts` 하나가 직렬화, 스키마 버전, SSR 가드, 파싱 실패 폴백을
