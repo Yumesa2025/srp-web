@@ -64,7 +64,7 @@ app/
     market/             # 공대거래 탭
     raid-analysis/      # 공대분석 탭
     help/               # 도움말 탭
-    tutorial/           # 웰컴 모달, 투어
+    tutorial/           # 웰컴 모달
     discord/            # Discord 웹훅 전송
     settings/           # 설정 모달 (Discord 웹훅 등록)
   api/
@@ -72,8 +72,6 @@ app/
     raid-analysis/      # 공대분석 통합 API (WCL)
     item/batch/         # 아이템 배치 조회
     discord/            # Discord 웹훅 전송
-    spell/              # 스펠 조회
-    logs/helpers.ts     # WCL GraphQL 헬퍼 (raid-analysis가 사용)
   hooks/
     useTour.ts          # Driver.js 스팟라이트 투어
     useLocalRosters.ts  # 명단 저장소
@@ -82,7 +80,7 @@ app/
     useAnalytics.ts
   lib/
     localStore.ts       # 로컬 저장소 래퍼 (유일한 저장 진입점)
-    defensiveStore.ts   # 방어 스킬 설정
+    wcl.ts              # WCL GraphQL 클라이언트
     raidUtils.ts
     tokenCache.ts       # WCL/Blizzard OAuth 토큰 캐시
   types/
