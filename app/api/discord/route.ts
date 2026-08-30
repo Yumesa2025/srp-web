@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { externalApi } from '@/app/lib/api';
-import { createClient } from '@/app/utils/supabase/server';
+
+// Discord 웹훅 URL 허용 접두사 — 임의 URL로의 SSRF 방지
+const DISCORD_WEBHOOK_PREFIX = 'https://discord.com/api/webhooks/';
 
 interface RosterPlayer {
   name: string;
@@ -11,11 +13,15 @@ interface RosterPlayer {
 
 interface RosterPayload {
   type: 'roster';
+  // Discord 웹훅 URL (DB 제거로 클라이언트가 직접 전달)
+  webhookUrl: string;
   players: RosterPlayer[];
 }
 
 interface MarketPayload {
   type: 'market';
+  // Discord 웹훅 URL (DB 제거로 클라이언트가 직접 전달)
+  webhookUrl: string;
   label: string;
   raidSize: number;
   totalGold: number;
@@ -99,28 +105,18 @@ function buildMarketEmbed(payload: MarketPayload) {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-  }
-
-  const { data: settings } = await supabase
-    .from('user_settings')
-    .select('discord_webhook_url')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  const webhookUrl = settings?.discord_webhook_url;
-  if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
-    return NextResponse.json({ error: 'Discord Webhook URL이 설정되지 않았습니다.' }, { status: 400 });
-  }
-
+  // 웹훅 URL이 body에 담겨 오므로 파싱을 먼저 수행
   let payload: DiscordPayload;
   try {
     payload = (await request.json()) as DiscordPayload;
   } catch {
     return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 });
+  }
+
+  // Discord 공식 웹훅 호스트만 허용 (SSRF 방지)
+  const webhookUrl = payload.webhookUrl;
+  if (typeof webhookUrl !== 'string' || !webhookUrl.startsWith(DISCORD_WEBHOOK_PREFIX)) {
+    return NextResponse.json({ error: 'Discord Webhook URL이 설정되지 않았습니다.' }, { status: 400 });
   }
 
   const discordBody = payload.type === 'roster'

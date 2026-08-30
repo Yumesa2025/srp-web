@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 import { getWclToken } from '@/app/lib/tokenCache';
-import { createClient } from '@/app/utils/supabase/server';
 import { fetchWclGraphQL, fetchPagedEvents, WclActorNode, WclAbilityNode, WclEventNode, WclFightNode } from '@/app/api/logs/helpers';
 import { BLOODLUST_ABILITY_NAMES } from '@/app/constants/defensiveDefaults';
 import { translateBossName } from '@/app/constants/bossNames';
@@ -57,10 +56,7 @@ function calcBloodlustAvg(
 
 // ── GET: 전투 목록 ─────────────────────────────────────────────
 export async function GET(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-
+  // 비로그인 전체 공개 — IP 기반 rate limit이 유일한 방어선
   const rl = checkRateLimit(getClientIp(request), 'raid-analysis-fights', 20, 60_000);
   if (!rl.allowed) return NextResponse.json({ error: '요청이 너무 많습니다.' }, { status: 429 });
 
@@ -139,10 +135,7 @@ const AnalysisSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-
+  // 비로그인 전체 공개 — IP 기반 rate limit이 유일한 방어선
   const rl = checkRateLimit(getClientIp(request), 'raid-analysis-full', 5, 60_000);
   if (!rl.allowed) return NextResponse.json({ error: '요청이 너무 많습니다.' }, { status: 429 });
 

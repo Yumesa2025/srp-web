@@ -7,6 +7,7 @@ import { useMarketStorage } from "@/app/hooks/useMarketStorage";
 import RaidSavePanel from "./RaidSavePanel";
 import RaidHistorySection from "./RaidHistorySection";
 import DiscordSendButton from "@/app/components/discord/DiscordSendButton";
+import { getStoredWebhookUrl } from "@/app/hooks/useDiscordWebhook";
 
 const FALLBACK_ICON = "https://wow.zamimg.com/images/wow/icons/large/inv_misc_questionmark.jpg";
 
@@ -237,13 +238,18 @@ export default function RaidMarketTab() {
           >
             정산 요약 복사 📋
           </button>
-          {ledgerItems.length > 0 && storage.isLoggedIn && (
+          {ledgerItems.length > 0 && (
             <DiscordSendButton
               label="Discord 전송"
               onSend={async () => {
+                const webhookUrl = getStoredWebhookUrl();
+                if (!webhookUrl) {
+                  throw new Error('설정에서 Discord Webhook URL을 먼저 등록해 주세요.');
+                }
                 await api.post('/api/discord', {
                   json: {
                     type: 'market',
+                    webhookUrl,
                     label: `${new Date().toLocaleDateString('ko-KR')} 정산`,
                     raidSize: payout.safeSize,
                     totalGold: payout.totalGold,
@@ -389,8 +395,8 @@ export default function RaidMarketTab() {
           </div>
         )}
 
-        {/* 저장 패널 (로그인 + 아이템 있을 때) */}
-        {storage.isLoggedIn && ledgerItems.length > 0 && (
+        {/* 저장 패널 (아이템 있을 때) */}
+        {ledgerItems.length > 0 && (
           <div data-tour="market-save">
             <RaidSavePanel
               raidSize={raidSize}
@@ -405,28 +411,18 @@ export default function RaidMarketTab() {
           </div>
         )}
 
-        {/* 로그인 유도 (비로그인) */}
-        {!storage.isLoggedIn && (
-          <div className="mt-5 p-3.5 rounded-xl bg-gray-900/60 border border-gray-700 text-center">
-            <p className="text-gray-500 text-xs">
-              🔒 로그인하면 회차를 저장하고 누적 통계를 확인할 수 있습니다
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* ── 누적 기록 섹션 (로그인 시) ───────────────────────── */}
-      {storage.isLoggedIn && (
-        <div data-tour="market-history">
-          <RaidHistorySection
-            sessions={storage.sessions}
-            isLoading={storage.isLoading}
-            onLoadSession={handleLoadSession}
-            onDeleteSession={storage.deleteSession}
-            onFetchAllItems={storage.fetchAllItems}
-          />
-        </div>
-      )}
+      {/* ── 누적 기록 섹션 ───────────────────────── */}
+      <div data-tour="market-history">
+        <RaidHistorySection
+          sessions={storage.sessions}
+          isLoading={storage.isLoading}
+          onLoadSession={handleLoadSession}
+          onDeleteSession={storage.deleteSession}
+          onFetchAllItems={storage.fetchAllItems}
+        />
+      </div>
     </div>
   );
 }

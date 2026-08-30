@@ -148,64 +148,36 @@ function AccountHelp({ onOpenTutorial }: { onOpenTutorial: () => void }) {
         </button>
       </div>
 
-      <Section title="👤 회원이란?">
+      <Section title="🔓 계정이 필요 없습니다">
         <p className="text-gray-400 text-xl leading-relaxed">
-          SRP는 Google 계정 또는 이메일로 로그인할 수 있습니다.
-          로그인하면 파티원 명단 저장, 공대 거래 기록, 분석 기능 이용이 가능합니다.
+          SRP는 로그인이 없습니다. 모든 기능을 바로 사용할 수 있습니다.
         </p>
       </Section>
 
-      <Section title="🔑 로그인 / 회원가입">
-        <div className="space-y-3">
-          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
-            <p className="text-white text-xl font-semibold mb-1">Google로 계속하기</p>
-            <p className="text-gray-400 text-xl">우상단 로그인 버튼 → Google로 계속하기를 누르면 구글 계정으로 즉시 로그인됩니다.</p>
-          </div>
-          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
-            <p className="text-white text-xl font-semibold mb-1">이메일 로그인</p>
-            <p className="text-gray-400 text-xl">이메일과 비밀번호로 회원가입 후 로그인할 수 있습니다.</p>
-          </div>
-        </div>
-      </Section>
-
-      <Section title="👤 프로필">
+      <Section title="💾 저장은 어디에 되나요?">
         <p className="text-gray-400 text-xl leading-relaxed mb-3">
-          우상단의 프로필 이름을 클릭하면 프로필 모달이 열립니다.
-          모달 안에 3개의 탭이 있습니다.
+          저장한 파티원 명단과 공대 거래 회차는 <span className="text-white font-semibold">지금 쓰는 브라우저에만</span> 보관됩니다.
+          서버로 올라가지 않습니다.
         </p>
-        <div className="space-y-3">
-          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
-            <p className="text-white text-xl font-semibold mb-1">📋 파티원 명단</p>
-            <p className="text-gray-400 text-xl">저장한 파티원 명단 목록을 확인하고 삭제할 수 있습니다.</p>
-          </div>
-          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
-            <p className="text-white text-xl font-semibold mb-1">💰 공대 거래</p>
-            <p className="text-gray-400 text-xl">저장한 공대 거래 회차 목록과 1인당 분배금을 확인할 수 있습니다.</p>
-          </div>
-          <div className="p-4 bg-gray-800 rounded-xl border border-gray-700/60">
-            <p className="text-white text-xl font-semibold mb-1">⚙️ 설정</p>
-            <p className="text-gray-400 text-xl">Discord Webhook URL 등록, 닉네임 변경, 회원 탈퇴를 할 수 있습니다.</p>
-          </div>
+        <div className="p-4 bg-amber-900/20 border border-amber-700/30 rounded-xl">
+          <p className="text-amber-400 text-xl font-semibold">⚠️ 알아두세요</p>
+          <ul className="text-gray-400 text-xl mt-1 space-y-1 list-disc list-inside">
+            <li>다른 기기나 다른 브라우저에서는 저장한 기록이 보이지 않습니다</li>
+            <li>브라우저 데이터(쿠키·사이트 데이터)를 지우면 기록도 함께 사라집니다</li>
+            <li>시크릿 창에서는 창을 닫는 순간 사라집니다</li>
+          </ul>
         </div>
       </Section>
 
-      <Section title="✏️ 닉네임 변경">
+      <Section title="⚙️ 설정">
+        <p className="text-gray-400 text-xl leading-relaxed mb-3">
+          우상단 <span className="text-white font-semibold">⚙️ 설정</span> 버튼을 누르면 Discord Webhook URL을 등록할 수 있습니다.
+          등록해두면 파티원 구성과 공대 거래 내역을 Discord 채널로 바로 전송할 수 있습니다.
+        </p>
         <div className="space-y-2">
-          <Step num={1}>프로필 모달 상단 닉네임 옆 <span className="text-white font-semibold">닉네임 변경</span> 버튼 클릭</Step>
-          <Step num={2}>원하는 닉네임 입력 후 <span className="text-white font-semibold">저장</span> 또는 Enter</Step>
-          <Step num={3}>우상단 헤더에 즉시 반영됩니다</Step>
-        </div>
-      </Section>
-
-      <Section title="🚪 회원 탈퇴">
-        <p className="text-gray-400 text-xl leading-relaxed mb-3">
-          프로필 모달 → <span className="text-white font-semibold">⚙️ 설정</span> 탭 맨 아래 <span className="text-white font-semibold">위험 구역</span>에서 탈퇴할 수 있습니다.
-        </p>
-        <div className="p-4 bg-red-900/20 border border-red-700/30 rounded-xl">
-          <p className="text-red-400 text-xl font-semibold">⚠️ 주의</p>
-          <p className="text-gray-400 text-xl mt-1">
-            탈퇴 시 파티원 명단, 공대 거래 기록 등 모든 데이터가 <span className="text-red-400 font-bold">영구 삭제</span>되며 복구할 수 없습니다.
-          </p>
+          <Step num={1}>Discord 채널 설정 → 연동 → 웹후크에서 URL 복사</Step>
+          <Step num={2}>우상단 <span className="text-white font-semibold">⚙️ 설정</span> → 입력창에 붙여넣기 → <span className="text-white font-semibold">저장</span></Step>
+          <Step num={3}>각 탭의 <span className="text-white font-semibold">Discord 전송</span> 버튼으로 전송</Step>
         </div>
       </Section>
 

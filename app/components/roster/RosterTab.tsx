@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { api } from "@/app/lib/api";
 import { PlayerData, RoleType } from "@/app/types";
 import RaidZone from "@/app/components/RaidZone";
 import RosterManager from "@/app/components/RosterManager";
 import PlayerCardSkeleton from "@/app/components/PlayerCardSkeleton";
 import DiscordSendButton from "@/app/components/discord/DiscordSendButton";
-import { createClient } from "@/app/utils/supabase/client";
+import { getStoredWebhookUrl } from "@/app/hooks/useDiscordWebhook";
 
 const WOW_CLASSES = [
   "전사", "성기사", "사냥꾼", "도적", "사제", "죽음의 기사",
@@ -89,16 +89,6 @@ export default function RosterTab({
   onFetchRaidData, onDragOver, onDrop, onDragStart, onRemovePlayer,
 }: RosterTabProps) {
   const [copyLabel, setCopyLabel] = useState("구성 복사");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setIsLoggedIn(!!data.user));
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      setIsLoggedIn(!!session?.user);
-    });
-    return () => listener.subscription.unsubscribe();
-  }, []);
   const totalPlayersCount = players.length;
   const assignedPlayersCount = players.filter((p) => p.role !== "UNASSIGNED").length;
   const presentClassNames = new Set(
@@ -142,10 +132,7 @@ export default function RosterTab({
             <span className="text-gray-500 text-sm font-normal block mt-1">(이름-서버명 한 줄에 하나씩)</span>
           </label>
           <div data-tour="roster-manager">
-            {isLoggedIn
-              ? <RosterManager currentText={inputText} onSelectRoster={onInputTextChange} />
-              : <span className="text-xs text-gray-500">명단 저장소는 로그인 후 이용 가능합니다.</span>
-            }
+            <RosterManager currentText={inputText} onSelectRoster={onInputTextChange} />
           </div>
         </div>
         <textarea
@@ -179,13 +166,18 @@ export default function RosterTab({
 
       {/* 인원 카운터 + 구성 복사 */}
       <div data-tour="roster-actions" className="mb-3 flex justify-end items-center gap-2">
-        {players.length > 0 && isLoggedIn && (
+        {players.length > 0 && (
           <DiscordSendButton
             label="Discord 전송"
             onSend={async () => {
+              const webhookUrl = getStoredWebhookUrl();
+              if (!webhookUrl) {
+                throw new Error('설정에서 Discord Webhook URL을 먼저 등록해 주세요.');
+              }
               await api.post('/api/discord', {
                 json: {
                   type: 'roster',
+                  webhookUrl,
                   players: players.map((p) => ({
                     name: p.name,
                     activeSpec: p.activeSpec,

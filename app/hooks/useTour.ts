@@ -30,7 +30,7 @@ const TAB_STEPS: Partial<Record<MainTab, TourStep[]>> = {
       element: '[data-tour="roster-manager"]',
       popover: {
         title: '명단 저장소',
-        description: '로그인이 필요합니다. 현재 공대 구성을 저장하고 나중에 불러올 수 있습니다. 여러 명단을 저장해두면 매번 다시 입력할 필요가 없습니다.',
+        description: '현재 공대 구성을 저장하고 나중에 불러올 수 있습니다. 여러 명단을 저장해두면 매번 다시 입력할 필요가 없습니다. 저장은 이 브라우저에만 남습니다.',
         side: 'bottom',
         align: 'end',
       },
@@ -48,7 +48,7 @@ const TAB_STEPS: Partial<Record<MainTab, TourStep[]>> = {
       element: '[data-tour="roster-actions"]',
       popover: {
         title: '구성 복사 및 Discord 전송',
-        description: '완성된 공대 구성을 클립보드에 복사하거나, Discord 웹훅을 연동해 채널에 바로 전송할 수 있습니다. Discord 웹훅 사용은 로그인이 필요합니다.',
+        description: '완성된 공대 구성을 클립보드에 복사하거나, Discord 웹훅을 연동해 채널에 바로 전송할 수 있습니다. 웹훅 URL은 우상단 설정에서 등록합니다.',
         side: 'bottom',
         align: 'end',
       },
@@ -117,7 +117,9 @@ const TAB_STEPS: Partial<Record<MainTab, TourStep[]>> = {
 function getSeenTabs(): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as string[];
+    const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+    // 손상되거나 손으로 편집된 값이 배열이 아닐 수 있다. 그대로 쓰면 includes에서 터진다.
+    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
   } catch {
     return [];
   }
@@ -126,8 +128,11 @@ function getSeenTabs(): string[] {
 export function useTour() {
   const markTabSeen = useCallback((tab: MainTab) => {
     const seen = getSeenTabs();
-    if (!seen.includes(tab)) {
+    if (seen.includes(tab)) return;
+    try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([...seen, tab]));
+    } catch {
+      // 기록에 실패해도 투어 진행 자체를 막지는 않는다
     }
   }, []);
 
@@ -136,7 +141,11 @@ export function useTour() {
   }, []);
 
   const resetAllTours = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // 저장소 접근이 막힌 환경에서는 초기화할 것도 없다
+    }
   }, []);
 
   const startTour = useCallback(async (tab: MainTab) => {

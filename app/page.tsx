@@ -38,14 +38,16 @@ export default function Home() {
   const { shouldShow, markSeen } = useTutorialFirstVisit();
   const { startTour, hasSeenTab, resetAllTours } = useTour();
 
-  // 첫 방문 시 웰컴 팝업 오픈
+  // 첫 방문 시 웰컴 팝업 오픈.
+  // 렌더 중에는 자기 상태만 조정한다. "봤음" 기록은 저장소에 쓰고 구독자에게
+  // 알리는 부수효과라, 렌더 도중 호출하면 다른 컴포넌트를 갱신하게 된다.
   if (shouldShow && !welcomeOpen) {
     setWelcomeOpen(true);
-    markSeen();
   }
 
   const handleWelcomeStart = () => {
     setWelcomeOpen(false);
+    markSeen();
     // 웰컴 팝업에서 시작 → ROSTER 탭 투어 시작
     setTimeout(() => startTour("ROSTER"), 300);
   };

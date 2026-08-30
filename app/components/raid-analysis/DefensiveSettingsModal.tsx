@@ -1,11 +1,17 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
-import { getDefensiveSettings, saveDefensiveSettings, resetDefensiveSettings } from '@/app/actions/defensiveSettings';
+/* 외부 WoW 아이콘 CDN 이미지로, Workers 배포에서 next/image 최적화 이득이 없어 <img>를 유지한다 */
+/* eslint-disable @next/next/no-img-element */
+
+import { useEffect, useState } from 'react';
+import {
+  getDefensiveSettings,
+  saveDefensiveSettings,
+  resetDefensiveSettings,
+  type DefensiveSettings,
+} from '@/app/lib/defensiveStore';
 import { DEFAULT_DEFENSIVE_SETTINGS } from '@/app/constants/defensiveDefaults';
 import type { DefensiveEntry } from '@/app/types/raidAnalysis';
-
-type DefensiveSettings = Record<string, DefensiveEntry[]>;
 
 interface Props {
   onClose: () => void;
@@ -19,24 +25,12 @@ interface SpellPreview {
 }
 
 export default function DefensiveSettingsModal({ onClose, onSaved }: Props) {
-  const [settings, setSettings] = useState<DefensiveSettings>(DEFAULT_DEFENSIVE_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPending, startTransition] = useTransition();
+  // 이 모달은 사용자가 열 때 비로소 마운트되므로 저장값을 초기값으로 바로 읽어도 된다
+  const [settings, setSettings] = useState<DefensiveSettings>(getDefensiveSettings);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [previews, setPreviews] = useState<Record<string, SpellPreview | null>>({});
   const [lookingUp, setLookingUp] = useState<Record<string, boolean>>({});
   const [savedMsg, setSavedMsg] = useState('');
-
-  useEffect(() => {
-    let canceled = false;
-    async function load() {
-      setIsLoading(true);
-      const data = await getDefensiveSettings();
-      if (!canceled) { setSettings(data); setIsLoading(false); }
-    }
-    load();
-    return () => { canceled = true; };
-  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -93,24 +87,23 @@ export default function DefensiveSettingsModal({ onClose, onSaved }: Props) {
   };
 
   const handleSave = () => {
-    startTransition(async () => {
-      const result = await saveDefensiveSettings(settings);
-      if (!result.error) {
-        setSavedMsg('저장됨 ✓');
-        onSaved(settings);
-        setTimeout(() => setSavedMsg(''), 2000);
-      }
-    });
+    const result = saveDefensiveSettings(settings);
+    setSavedMsg(result.error ?? '저장됨 ✓');
+    if (!result.error) onSaved(settings);
+    setTimeout(() => setSavedMsg(''), 2000);
   };
 
   const handleReset = () => {
-    startTransition(async () => {
-      await resetDefensiveSettings();
-      setSettings(DEFAULT_DEFENSIVE_SETTINGS);
-      setSavedMsg('기본값으로 초기화됨');
-      onSaved(DEFAULT_DEFENSIVE_SETTINGS);
+    const result = resetDefensiveSettings();
+    if (result.error) {
+      setSavedMsg(result.error);
       setTimeout(() => setSavedMsg(''), 2000);
-    });
+      return;
+    }
+    setSettings(DEFAULT_DEFENSIVE_SETTINGS);
+    setSavedMsg('기본값으로 초기화됨');
+    onSaved(DEFAULT_DEFENSIVE_SETTINGS);
+    setTimeout(() => setSavedMsg(''), 2000);
   };
 
   return (
@@ -128,12 +121,7 @@ export default function DefensiveSettingsModal({ onClose, onSaved }: Props) {
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-4">
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="space-y-3">
+          <div className="space-y-3">
               {Object.keys(settings).map(specKey => (
                 <div key={specKey} className="bg-gray-800 rounded-xl p-3 border border-gray-700">
                   <p className="text-cyan-300 font-bold text-xs mb-2">{specKey}</p>
@@ -202,14 +190,12 @@ export default function DefensiveSettingsModal({ onClose, onSaved }: Props) {
                   </div>
                 </div>
               ))}
-            </div>
-          )}
+          </div>
         </div>
 
         <div className="px-6 py-4 border-t border-gray-700 flex items-center justify-between gap-3 shrink-0">
           <button
             onClick={handleReset}
-            disabled={isPending}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
           >
             기본값으로 초기화
@@ -218,10 +204,9 @@ export default function DefensiveSettingsModal({ onClose, onSaved }: Props) {
             {savedMsg && <span className="text-emerald-400 text-xs font-semibold">{savedMsg}</span>}
             <button
               onClick={handleSave}
-              disabled={isPending}
               className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-50"
             >
-              {isPending ? '저장 중...' : '저장'}
+              저장
             </button>
           </div>
         </div>

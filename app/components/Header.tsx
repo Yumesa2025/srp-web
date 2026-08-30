@@ -1,22 +1,6 @@
-import { createClient } from '@/app/utils/supabase/server';
-import AuthClientUI from './auth/AuthClientUI';
-import type { ProfileSummary } from '@/app/types/profile';
+import SettingsButton from './settings/SettingsButton';
 
-export default async function Header() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  let profile: ProfileSummary | null = null;
-
-  if (user) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('display_name, avatar_url')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    profile = data as ProfileSummary | null;
-  }
-
+export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full bg-gray-900/95 backdrop-blur-md border-b border-gray-800">
       <div className="max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-between">
@@ -35,7 +19,7 @@ export default async function Header() {
             </svg>
             <span className="text-sm text-gray-400">건전한 피드백 제공</span>
           </a>
-          <AuthClientUI user={user} profile={profile} />
+          <SettingsButton />
         </div>
       </div>
     </header>
