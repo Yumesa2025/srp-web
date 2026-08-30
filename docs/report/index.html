@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Smart Raid Plan 제품 분석 보고서 — 계측 설계, 실사용자 27명 4,816 이벤트 분석, 개인정보 자체 감사.">
+<meta property="og:title" content="Smart Raid Plan · 제품 분석 보고서">
+<meta property="og:description" content="만든 기능이 실제로 쓰이는지 재본 기록 — 계측 설계부터 개인정보 자체 감사까지.">
+<meta property="og:type" content="article">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2213%22 font-size=%2213%22>&#128202;</text></svg>">
+<style>*,*::before,*::after{box-sizing:border-box}body,h1,h2,h3,p,ul,dl,dd,figure{margin:0}ul{list-style-position:outside}img{max-width:100%}</style>
+<title>Smart Raid Plan · 제품 분석 보고서</title>
+<style>
+  :root {
+    --paper:      #FCFBF9;
+    --paper-2:    #F5F2EC;
+    --ink:        #1B1D21;
+    --ink-2:      #4A4E56;
+    --ink-3:      #7A7E86;
+    --rule:       #E3E0D9;
+    --rule-2:     #CFCAC0;
+    --accent:     #A06D18;
+    --accent-mk:  #A06D18;
+    --good:       #00806A;
+    --attention:  #A83A28;
+    --shadow:     0 1px 2px rgba(27,29,33,.05);
+
+    --sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+            'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', 'Noto Sans KR', sans-serif;
+    --mono: ui-monospace, SFMono-Regular, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+
+    --measure: 68ch;
+    --gutter: 8.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:     #16171A;
+      --paper-2:   #1D1F23;
+      --ink:       #E9E7E2;
+      --ink-2:     #A5A29B;
+      --ink-3:     #75736E;
+      --rule:      #2B2D31;
+      --rule-2:    #3A3D42;
+      --accent:    #D6A44A;
+      --accent-mk: #B8842A;
+      --good:      #29A18B;
+      --attention: #D06A52;
+      --shadow:    none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:     #16171A;
+    --paper-2:   #1D1F23;
+    --ink:       #E9E7E2;
+    --ink-2:     #A5A29B;
+    --ink-3:     #75736E;
+    --rule:      #2B2D31;
+    --rule-2:    #3A3D42;
+    --accent:    #D6A44A;
+    --accent-mk: #B8842A;
+    --good:      #29A18B;
+    --attention: #D06A52;
+    --shadow:    none;
+  }
+  :root[data-theme="light"] {
+    --paper:     #FCFBF9;
+    --paper-2:   #F5F2EC;
+    --ink:       #1B1D21;
+    --ink-2:     #4A4E56;
+    --ink-3:     #7A7E86;
+    --rule:      #E3E0D9;
+    --rule-2:    #CFCAC0;
+    --accent:    #A06D18;
+    --accent-mk: #A06D18;
+    --good:      #00806A;
+    --attention: #A83A28;
+    --shadow:    0 1px 2px rgba(27,29,33,.05);
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.72;
+    -webkit-font-smoothing: antialiased;
+    padding: clamp(2rem, 6vw, 5rem) clamp(1.15rem, 5vw, 3rem) 6rem;
+    /* 한국어는 어절 단위로 끊어야 읽힌다. 기본값은 글자 중간에서 잘린다. */
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  .wrap { max-width: calc(var(--gutter) + var(--measure)); margin: 0 auto; }
+
+  /* ─ masthead ─ */
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 1.5rem; margin-bottom: 2.75rem; }
+  .kicker {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .9rem;
+  }
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.75rem); font-weight: 700; line-height: 1.18;
+    letter-spacing: -.022em; text-wrap: balance; margin-bottom: .55rem;
+  }
+  .standfirst { color: var(--ink-2); font-size: 1.05rem; max-width: 56ch; }
+
+  .meta {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 1.15rem 2rem; margin-top: 1.9rem;
+    font-family: var(--mono); font-size: .78rem; line-height: 1.55;
+  }
+  .meta dt { color: var(--ink-3); letter-spacing: .05em; text-transform: uppercase; font-size: .68rem; }
+  .meta dd { color: var(--ink); margin-top: .2rem; }
+  .meta a { color: var(--accent); text-underline-offset: 2px; }
+
+  /* ─ headline figures ─ */
+  .figures {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    margin: 0 0 3.25rem;
+  }
+  .fig { background: var(--paper); padding: 1.1rem 1.15rem 1rem; }
+  .fig-n {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 1.85rem; font-weight: 600; letter-spacing: -.03em; line-height: 1.1;
+  }
+  .fig-l { font-family: var(--mono); font-size: .7rem; color: var(--ink-3); margin-top: .3rem; letter-spacing: .04em; }
+
+  /* ─ sections ─ */
+  section { margin-bottom: 3.5rem; }
+  .sec-head { display: flex; gap: .9rem; align-items: baseline; margin-bottom: 1.4rem;
+              border-bottom: 1px solid var(--rule); padding-bottom: .6rem; }
+  .sec-num { font-family: var(--mono); font-size: .78rem; color: var(--accent); flex: none;
+             font-variant-numeric: tabular-nums; }
+  h2 { font-size: 1.32rem; font-weight: 650; letter-spacing: -.014em; text-wrap: balance; }
+
+  h3 { font-size: 1rem; font-weight: 650; margin: 2rem 0 .7rem; letter-spacing: -.008em; }
+  p { max-width: var(--measure); margin-bottom: 1rem; }
+  p.lede { color: var(--ink-2); }
+  strong { font-weight: 650; }
+  em { font-style: normal; font-family: var(--mono); font-size: .93em;
+       font-variant-numeric: tabular-nums; }
+
+  ul { max-width: var(--measure); margin: 0 0 1rem; padding-left: 1.15rem; }
+  li { margin-bottom: .45rem; }
+  li::marker { color: var(--ink-3); }
+
+  /* ─ tables ─ */
+  .tw { overflow-x: auto; margin: 0 0 1.5rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { text-align: left; padding: .6rem .85rem .6rem 0; border-bottom: 1px solid var(--rule);
+           vertical-align: top; }
+  thead th { font-family: var(--mono); font-size: .68rem; letter-spacing: .07em;
+             text-transform: uppercase; color: var(--ink-3); font-weight: 500;
+             border-bottom: 1px solid var(--rule-2); white-space: nowrap; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ─ bar rows ─ */
+  .bars { margin: 0 0 1.4rem; max-width: 44rem; }
+  .bar-row { display: grid; grid-template-columns: minmax(7rem, 12rem) 1fr auto;
+             gap: .9rem; align-items: center; padding: .42rem 0; }
+  .bar-name { font-size: .88rem; }
+  .bar-track { height: 12px; background: var(--paper-2); border-radius: 2px; overflow: hidden; }
+  /* 0.2%처럼 극단적으로 작은 값도 보이도록 최소 폭을 준다 */
+  .bar-fill { height: 100%; background: var(--accent-mk);
+              border-radius: 0 4px 4px 0; display: block; min-width: 3px; }
+  .bar-val { font-family: var(--mono); font-variant-numeric: tabular-nums;
+             font-size: .8rem; color: var(--ink-2); white-space: nowrap; }
+  .bar-note { font-family: var(--mono); font-size: .7rem; color: var(--accent);
+              grid-column: 2 / -1; margin-top: -.1rem; }
+
+  /* ─ vitals ─ */
+  .vitals { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+            gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-bottom: 1.4rem; }
+  .vital { background: var(--paper); padding: .95rem 1rem; }
+  .vital-k { font-family: var(--mono); font-size: .7rem; color: var(--ink-3); letter-spacing: .06em; }
+  .vital-v { font-family: var(--mono); font-variant-numeric: tabular-nums;
+             font-size: 1.35rem; font-weight: 600; margin: .18rem 0 .4rem; letter-spacing: -.02em; }
+  .chip { display: inline-flex; align-items: center; gap: .34rem;
+          font-family: var(--mono); font-size: .68rem; letter-spacing: .04em; }
+  .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+  .chip.good { color: var(--good); }
+  .chip.attn { color: var(--attention); }
+
+  /* ─ findings ─ */
+  .find { border-left: 2px solid var(--rule-2); padding-left: 1.15rem; margin-bottom: 1.6rem;
+          max-width: var(--measure); }
+  .find-h { font-weight: 650; margin-bottom: .3rem; }
+  .find-h .n { font-family: var(--mono); color: var(--accent); margin-right: .5rem; font-size: .85em; }
+  .find p { margin-bottom: 0; }
+
+  /* ─ status list ─ */
+  .actions { list-style: none; padding: 0; max-width: var(--measure); }
+  .actions li { display: grid; grid-template-columns: 5.6rem 1fr; gap: .9rem;
+                padding: .55rem 0; border-bottom: 1px solid var(--rule); margin: 0; }
+  .actions .st { font-family: var(--mono); font-size: .7rem; letter-spacing: .04em; padding-top: .18rem; }
+  .st.done { color: var(--good); }
+  .st.auto { color: var(--ink-3); }
+
+  /* ─ callout ─ */
+  .callout { background: var(--paper-2); border: 1px solid var(--rule);
+             padding: 1.1rem 1.25rem; margin: 0 0 1.5rem; max-width: var(--measure); }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .lbl { font-family: var(--mono); font-size: .68rem; letter-spacing: .08em;
+                  text-transform: uppercase; color: var(--attention); margin-bottom: .45rem; }
+
+  footer { border-top: 1px solid var(--rule); margin-top: 4rem; padding-top: 1.4rem;
+           font-family: var(--mono); font-size: .74rem; color: var(--ink-3); max-width: var(--measure); }
+  footer p { margin-bottom: .5rem; max-width: none; }
+
+  a { color: var(--accent); }
+  a:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .bar-row { grid-template-columns: 1fr auto; }
+    .bar-track { grid-column: 1 / -1; order: 3; }
+    .actions li { grid-template-columns: 1fr; gap: .15rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="kicker">제품 분석 · 데이터 기반 개선 보고서</div>
+    <h1>만든 기능이 실제로 쓰이는지 재본 기록</h1>
+    <p class="standfirst">
+      계측을 직접 설계해 실사용자 27명의 행동 데이터 4,816건을 수집하고, 그 결과로
+      기능의 존폐와 제품 구조를 결정했다.
+    </p>
+
+    <dl class="meta">
+      <div><dt>프로젝트</dt><dd>Smart Raid Plan<br><span style="color:var(--ink-3)">(내부 코드명 Hippocamp)</span></dd></div>
+      <div><dt>역할</dt><dd>기획 · 개발 · 분석 단독</dd></div>
+      <div><dt>측정 기간</dt><dd>2026-03-18 → 04-25<br><span style="color:var(--ink-3)">실사용 5.5주 · 클로즈드 베타</span></dd></div>
+      <div><dt>데이터 출처</dt><dd>PostHog 프로덕션<br><span style="color:var(--ink-3)">2026-08-30 재조회</span></dd></div>
+      <div><dt>서비스</dt><dd><a href="https://healthy-feedback.com">healthy-feedback.com</a></dd></div>
+      <div><dt>소스</dt><dd><a href="https://github.com/Yumesa2025/srp-web">github.com/Yumesa2025/srp-web</a></dd></div>
+    </dl>
+  </header>
+
+  <div class="figures">
+    <div class="fig"><div class="fig-n">27</div><div class="fig-l">고유 방문자</div></div>
+    <div class="fig"><div class="fig-n">4,816</div><div class="fig-l">수집 이벤트</div></div>
+    <div class="fig"><div class="fig-n">93</div><div class="fig-l">세션</div></div>
+    <div class="fig"><div class="fig-n">557</div><div class="fig-l">조회된 캐릭터</div></div>
+    <div class="fig"><div class="fig-n">5.5<span style="font-size:.6em">주</span></div><div class="fig-l">측정 기간</div></div>
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>계측 설계</h2></div>
+    <p class="lede">
+      분석 도구를 붙이는 데서 끝내지 않고, <strong>무엇을 알아야 결정을 내릴 수 있는가</strong>를
+      먼저 정의한 뒤 최소한의 이벤트만 심었다.
+    </p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>계측 항목</th><th>설계 의도</th></tr></thead>
+        <tbody>
+          <tr><td><em>tab_change</em><br><span style="color:var(--ink-3);font-size:.85em">커스텀</span></td>
+              <td>어떤 기능이 실제로 쓰이는지 — 기능별 투자 우선순위 판단</td></tr>
+          <tr><td><em>character_fetch</em><br><span style="color:var(--ink-3);font-size:.85em">커스텀 · character_count 포함</span></td>
+              <td>핵심 가치 행동 도달 여부와 실제 사용 규모</td></tr>
+          <tr><td><em>$pageview / $pageleave</em></td><td>방문·이탈 기준선</td></tr>
+          <tr><td>Autocapture</td><td>사전에 예상하지 못한 클릭 경로 회수</td></tr>
+          <tr><td><em>$rageclick</em></td><td>UX 마찰 지점 자동 탐지</td></tr>
+          <tr><td>Web Vitals</td><td>실사용 환경의 체감 성능</td></tr>
+          <tr><td>Session Replay</td><td>정량 지표로 설명되지 않는 이탈의 원인 확인</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>의도적으로 고른 설정</h3>
+    <ul>
+      <li><em>capture_pageview: false</em> + 수동 캡처 — App Router의 클라이언트 라우팅에서
+          페이지뷰가 누락되거나 중복되는 문제를 직접 제어하기 위해.</li>
+      <li><em>person_profiles: "identified_only"</em> — 로그인이 없는 서비스이므로 불필요한
+          개인 프로필 생성을 차단. 실제 저장된 프로필 0건.</li>
+      <li>환경변수가 없으면 SDK 자체를 초기화하지 않음 — 로컬·프리뷰 트래픽이
+          프로덕션 지표를 오염시키지 않도록.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>측정 결과</h2></div>
+
+    <h3>기능별 사용 비중</h3>
+    <p style="color:var(--ink-2);font-size:.92rem">
+      탭 전환 <em>852</em>건 / 16명. 사용자 1인당 평균 <strong>53회</strong> 전환 — 한 번 들어온
+      사용자는 얕게 훑고 나가는 게 아니라 여러 기능을 오가며 실제 업무에 썼다.
+    </p>
+
+    <div class="bars">
+      <div class="bar-row">
+        <div class="bar-name">공대 거래</div>
+        <div class="bar-track"><span class="bar-fill" style="width:100%"></span></div>
+        <div class="bar-val">243 · 28.5%</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-name">파티원 명단</div>
+        <div class="bar-track"><span class="bar-fill" style="width:97.1%"></span></div>
+        <div class="bar-val">236 · 27.7%</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-name">공대 분석</div>
+        <div class="bar-track"><span class="bar-fill" style="width:84.8%"></span></div>
+        <div class="bar-val">206 · 24.2%</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-name">도움말</div>
+        <div class="bar-track"><span class="bar-fill" style="width:67.9%"></span></div>
+        <div class="bar-val">165 · 19.4%</div>
+      </div>
+      <div class="bar-row"><div class="bar-note">↳ 온보딩 비용이 과도하다는 신호</div></div>
+      <div class="bar-row">
+        <div class="bar-name">전술 타임라인 에디터</div>
+        <div class="bar-track"><span class="bar-fill" style="width:0.8%"></span></div>
+        <div class="bar-val">2 · 0.2%</div>
+      </div>
+      <div class="bar-row"><div class="bar-note">↳ 만들었지만 쓰이지 않는 기능</div></div>
+    </div>
+
+    <h3>핵심 행동</h3>
+    <p>
+      <em>character_fetch</em> <strong>39회</strong>, 누적 <strong>557 캐릭터</strong> 조회,
+      회당 평균 <strong>14.3명</strong>(최대 23명). 회당 14~23명은 실제 공격대 편성 단위와
+      일치한다 — 테스트성 클릭이 아니라 실사용 데이터임을 확인한 근거다.
+    </p>
+
+    <h3>체감 성능 · Web Vitals p75</h3>
+    <div class="vitals">
+      <div class="vital"><div class="vital-k">LCP</div><div class="vital-v">2,400<span style="font-size:.55em">ms</span></div><div class="chip good">Good · ≤2,500</div></div>
+      <div class="vital"><div class="vital-k">INP</div><div class="vital-v">56<span style="font-size:.55em">ms</span></div><div class="chip good">Good · ≤200</div></div>
+      <div class="vital"><div class="vital-k">CLS</div><div class="vital-v">0.007</div><div class="chip good">Good · ≤0.1</div></div>
+      <div class="vital"><div class="vital-k">FCP</div><div class="vital-v">2,364<span style="font-size:.55em">ms</span></div><div class="chip good">참고값</div></div>
+    </div>
+    <p style="font-size:.92rem;color:var(--ink-2)">
+      460 샘플. 상호작용 응답성(INP)과 레이아웃 안정성(CLS)은 기준을 크게 상회한다.
+      초기 렌더(LCP·FCP)는 기준선을 겨우 통과하는 수준이라 개선 여지가 남은 영역으로 식별했다.
+      <strong>이 값은 실사용자 필드 측정</strong>이며, 별도로 기록한 Lighthouse 랩 측정치
+      (3.3s → 1.9s)와는 측정 조건이 다르다.
+    </p>
+
+    <h3>사용 환경</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>구분</th><th>값</th></tr></thead>
+        <tbody>
+          <tr><td>디바이스</td><td class="num">데스크톱 26명 (이벤트 98.6%) · 모바일 3명</td></tr>
+          <tr><td>지역</td><td class="num">전원 국내 (용인 · 서울 · 고양 · 포항 · 창원 등)</td></tr>
+          <tr><td>세션 리플레이</td><td class="num">93세션 · 실활동 172.9분 · 클릭 4,193회</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>데이터에서 내린 결정</h2></div>
+
+    <div class="find">
+      <div class="find-h"><span class="n">①</span>도움말 소비 19.4% — 온보딩 비용이 과도하다</div>
+      <p>전체 탭 전환의 5분의 1이 도움말이었다. 기능이 아니라 <strong>쓰는 법을 찾는 행위</strong>에
+      사용자 시간이 쓰이고 있다는 신호로 읽었다.</p>
+    </div>
+
+    <div class="find">
+      <div class="find-h"><span class="n">②</span>전술 타임라인 에디터 0.2% — 기능을 제거했다</div>
+      <p>852건 중 2건. 개발 비용 대비 사용량이 사실상 0인 기능을 데이터로 확인하고 걷어냈다.
+      감이 아니라 수치로 기능의 존폐를 판단할 근거를 확보한 사례다.</p>
+    </div>
+
+    <div class="find">
+      <div class="find-h"><span class="n">③</span>방문자 33%에서 rageclick — 마찰 지점을 특정했다</div>
+      <p>27명 중 9명에게서 클릭이 반응하지 않는 지점이 자동 수집됐다. 해당 세션을 리플레이로
+      되돌려 실제 원인을 확인하는 흐름을 구축했다.</p>
+    </div>
+
+    <div class="find">
+      <div class="find-h"><span class="n">④</span>로그인이 진입 장벽으로 작동했다</div>
+      <p>autocapture에 <em>로그인</em> · <em>회원가입</em> · <em>Google로 계속하기</em> 클릭이
+      각각 39 · 46 · 16건 남은 반면, 로그인 이후에만 도달 가능한 지표는 그에 비례해 늘지 않았다.
+      이후 제품은 <strong>로그인을 완전히 제거하고 브라우저 로컬 저장 기반으로 전환</strong>했다 —
+      가입 없이 즉시 도구를 쓰는 구조다.</p>
+    </div>
+
+    <div class="find">
+      <div class="find-h"><span class="n">⑤</span>데스크톱 98.6% — 모바일 대응을 뒤로 미뤘다</div>
+      <p>모바일에 리소스를 쓰는 대신 데스크톱의 밀도 높은 표 UI에 집중하는 판단의 근거로 썼다.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>개인정보 자체 감사와 조치</h2></div>
+    <p class="lede">
+      지표를 얻는 것과 사용자 데이터를 필요 이상으로 쥐고 있는 것은 다른 문제라고 보고,
+      수집한 데이터를 직접 재감사했다.
+    </p>
+
+    <h3>발견</h3>
+    <ul>
+      <li>로그인 제거 이후 <strong>person 프로필 0건</strong> — 익명 단위로만 분석되도록
+          설정돼 있음을 확인.</li>
+      <li>다만 이벤트에 <strong>IP와 도시 단위 위치</strong>가 남아 있었다.</li>
+      <li>autocapture 클릭 텍스트에 <strong>실명 1건</strong>이 저장돼 있었다.</li>
+      <li>서비스 개발이 끝난 뒤에도 <strong>세션 리플레이 수집이 계속되고 있었다.</strong></li>
+    </ul>
+
+    <h3>조치</h3>
+    <ul class="actions">
+      <li><span class="st done">조치 완료</span><span>세션 리플레이 수집 중단 <em>(session_recording_opt_in: false)</em></span></li>
+      <li><span class="st done">조치 완료</span><span>IP 익명화 활성 <em>(anonymize_ips: true)</em> — 이후 이벤트에서 IP를 저장하지 않음</span></li>
+      <li><span class="st done">조치 완료</span><span>autocapture 중단 <em>(autocapture_opt_out: true)</em> — 클릭 텍스트에 실명이 수집되던 경로를 차단</span></li>
+      <li><span class="st done">조치 완료</span><span>콘솔 로그 · 성능 · 히트맵 캡처 중단</span></li>
+      <li><span class="st done">조치 완료</span><span>잔여 녹화본 삭제 — 현재 저장된 세션 리플레이 <strong>0건</strong></span></li>
+      <li><span class="st auto">자동 만료</span><span>측정 기간의 녹화본 93건은 30일 보존 정책에 따라 이미 만료됨</span></li>
+    </ul>
+
+    <div class="callout">
+      <div class="lbl">보고서 정정</div>
+      <p>초판에는 <em>93세션 · 123.7MB가 보존 중</em>이라고 적었으나, 재확인 결과 이는
+      이벤트에 남은 <strong>세션 메타데이터</strong>였고 재생 가능한 녹화본은 30일 보존 정책으로
+      이미 만료된 상태였다. 실제로 남아 있던 1건은 배포 검증용 접속 기록이었고 삭제했다.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>이 분석의 한계</h2></div>
+    <ul>
+      <li>표본 27명 규모의 클로즈드 베타 데이터로, <strong>통계적 유의성을 주장할 수 있는
+          규모가 아니다.</strong></li>
+      <li>위 결정들은 상관 관찰에 기반하며, A/B 테스트로 인과를 검증한 결과가 아니다.</li>
+      <li>측정 기간이 5.5주로 짧아 리텐션 코호트 분석은 수행하지 않았다.</li>
+    </ul>
+    <p>
+      규모를 과장하지 않는 편이 이 기록의 쓸모에 맞다고 봤다. 여기서 얻은 것은 통계적 결론이
+      아니라, <strong>만든 것이 쓰이는지 재보고 그 결과로 결정을 바꾸는 절차</strong>다.
+    </p>
+  </section>
+
+  <footer>
+    <p>Smart Raid Plan · 제품 분석 보고서 · 2026-08-30 기준</p>
+    <p>측정 2026-03-18 → 04-25 · PostHog 프로덕션 프로젝트 원본 이벤트 재조회</p>
+  </footer>
+
+</div>
+
+</body>
+</html>
